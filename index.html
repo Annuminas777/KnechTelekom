@@ -214,8 +214,8 @@
 <body>
 <div class="terminal">
   <div class="header">
-    <div class="title">ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</div>
-    <div>ENTER PASSWORD NOW</div>
+    <div class="title">Welcome to KnechTelekom VDT 4.0</div>
+    <div>ENTER PASSWORD</div>
   </div>
   
   <div class="attempts">
@@ -233,7 +233,7 @@
   <div class="display" id="display"></div>
   
   <div class="footer">
-    >Hints: Matching brackets remove duds or replenish tries
+    Copyright 2077 KnechTelekom Industries
   </div>
   
   <div class="overlay" id="overlay">
@@ -365,15 +365,15 @@ function selectWord(element, word) {
   
   // Check if correct
   if (word === gameState.correctWord) {
-  showMessage("> Password accepted.");
-  gameState.locked = true;
-  setTimeout(() => {
-    showOverlay("ACCESS GRANTED");
+    showMessage("> Password accepted.");
+    gameState.locked = true;
     setTimeout(() => {
-      // Redirect to rickroll
-      window.top.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&autoplay=1";
-    }, 1500);
-  }, 1000);
+      showOverlay("ACCESS GRANTED");
+      setTimeout(() => {
+        // Close the terminal
+        parent.postMessage({ type: "KNECH_VDT", action: "close" }, "*");
+      }, 1500);
+    }, 1000);
   } else {
     const likeness = calculateLikeness(word, gameState.correctWord);
     showMessage(`> Entry denied. Likeness=${likeness}`);
@@ -410,7 +410,7 @@ function selectBracket(element, bracketId) {
     updateAttempts();
     showMessage("> Tries reset.");
   } else {
-    // Remove a dud
+    // Remove a dud (costs an attempt)
     const wrongWords = gameState.words.filter(w => w !== gameState.correctWord);
     if (wrongWords.length > 0) {
       const dudWord = wrongWords[random(wrongWords.length)];
@@ -425,6 +425,18 @@ function selectBracket(element, bracketId) {
         }
       });
       showMessage("> Dud removed.");
+      
+      // Cost an attempt for dud removal
+      gameState.attempts--;
+      updateAttempts();
+      
+      if (gameState.attempts <= 0) {
+        gameState.locked = true;
+        setTimeout(() => {
+          showOverlay("TERMINAL LOCKED");
+          playSound(200, 200);
+        }, 1000);
+      }
     }
   }
 }
@@ -454,7 +466,7 @@ function generateContent() {
   gameState.correctWord = selectedWords[random(selectedWords.length)];
   
   // Create lines of content
-  const totalLines = 17;
+  const totalLines = 20;
   const wordsPerColumn = Math.ceil(selectedWords.length / CONFIG.columns);
   let wordIndex = 0;
   
