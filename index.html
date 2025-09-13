@@ -1,460 +1,570 @@
-<!-- ===== KnechTelekom VDT 1.0 — terminal mini-game (fixed version) ===== -->
+<!-- ===== Fallout Terminal Hacking Mini-Game ===== -->
 <iframe id="knech-vdt"
         allow="autoplay"
         style="position:fixed;inset:0;width:100vw;height:100vh;border:0;z-index:2147483647;"
         srcdoc='<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KnechTelekom VDT 1.0</title>
+<title>Terminal Hacking</title>
 <style>
-  /* Reset to ensure isolation from parent styles */
+  /* CSS Reset */
   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
   
-  :root{
-    --g:#48ff48;
-    --bg:#001400;
-    --terminal-glow: #1aff1a;
+  :root {
+    --green: #41ff00;
+    --dark-green: #001100;
+    --bg: #000000;
+    --glow: #41ff00;
   }
   
-  html,body{
-    height:100%;
-    margin:0;
+  html, body {
+    height: 100%;
+    width: 100%;
     overflow: hidden;
+    background: #000;
   }
   
-  body{
-    background:#001100;
-    color:var(--g);
-    font-family: Consolas, "Courier New", monospace;
+  body {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 14px;
+    line-height: 1.2;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+  }
+  
+  .terminal {
+    width: 100%;
+    max-width: 800px;
+    height: 100%;
+    max-height: 600px;
+    background: var(--bg);
+    border: 2px solid #1a1a1a;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    text-shadow: 0 0 5px var(--glow);
+  }
+  
+  /* Scanline effect */
+  .terminal::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      transparent 0%,
+      transparent 50%,
+      rgba(65, 255, 0, 0.03) 50%,
+      rgba(65, 255, 0, 0.03) 100%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  /* Flicker effect */
+  @keyframes flicker {
+    0% { opacity: 0.95; }
+    50% { opacity: 1; }
+    100% { opacity: 0.98; }
+  }
+  
+  .terminal > * {
+    position: relative;
+    z-index: 2;
+    animation: flicker 0.15s infinite;
+  }
+  
+  .header {
+    margin-bottom: 10px;
+  }
+  
+  .title {
     font-size: 16px;
-    line-height: 1.4;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    margin-bottom: 5px;
   }
   
-  .crt{
-    width:min(100vw,900px);
-    height:min(100vh,680px);
-    background:var(--bg);
-    border:10px solid #2a2a2a;
-    border-radius:8px;
-    position:relative;
-    padding:18px;
-    color:var(--g);
-    text-shadow:0 0 3px var(--terminal-glow);
-    overflow:hidden;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
+  .attempts {
+    margin: 10px 0;
+    font-size: 14px;
   }
   
-  .crt:before{
-    content:"";
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    background:linear-gradient(transparent 50%,rgba(0,0,0,.12) 50%);
-    background-size:100% 4px;
+  .attempts-blocks {
+    display: inline-block;
+    margin-left: 10px;
   }
   
-  .title{
-    font-weight:700;
-    color:var(--g);
+  .block {
+    display: inline-block;
+    width: 10px;
+    height: 12px;
+    background: var(--green);
+    margin-right: 3px;
+    vertical-align: middle;
   }
   
-  .hud{
-    display:flex;
-    gap:2ch;
-    color:var(--g);
-  }
-  
-  .tries{
-    color:var(--g);
-  }
-  
-  .tries .b{
-    display:inline-block;
-    width:10px;
-    height:14px;
-    border:1px solid var(--g);
-    margin-right:2px;
-  }
-  
-  .tries .b.on{
-    background:var(--g);
-    box-shadow: 0 0 4px var(--terminal-glow);
-  }
-  
-  .grid{
-    flex:1 1 auto;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:18px;
-    overflow:auto;
-    border:1px solid #2f6;
-    padding:8px;
-    background: rgba(0,20,0,0.3);
-  }
-  
-  .addr{
-    opacity:.9;
-    margin-right:1ch;
-    color:var(--g);
-  }
-  
-  .row{
-    white-space:pre;
-    font-size:15px;
-    color:var(--g);
-    font-family: inherit;
-  }
-  
-  /* Explicit styling for words and brackets */
-  .word{
-    cursor:pointer;
-    color:var(--g);
-    text-shadow:0 0 3px var(--terminal-glow);
-    display: inline;
-    font-family: inherit;
-    font-size: inherit;
+  .block.off {
     background: transparent;
+    border: 1px solid var(--green);
   }
   
-  .br{
-    cursor:pointer;
-    color:var(--g);
-    text-shadow:0 0 3px var(--terminal-glow);
+  #message {
+    height: 20px;
+    margin: 5px 0;
+  }
+  
+  /* Main terminal display */
+  .display {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: rgba(0, 17, 0, 0.5);
+    border: 1px solid var(--green);
+    padding: 10px;
+    font-family: "Courier New", Courier, monospace;
+    white-space: pre;
+    letter-spacing: 0.05em;
+  }
+  
+  .display::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  .display::-webkit-scrollbar-track {
+    background: var(--dark-green);
+  }
+  
+  .display::-webkit-scrollbar-thumb {
+    background: var(--green);
+  }
+  
+  /* Terminal lines */
+  .line {
+    margin: 2px 0;
+    font-size: 14px;
+    display: block;
+  }
+  
+  .hex {
+    color: var(--green);
+    opacity: 0.8;
     display: inline;
-    font-family: inherit;
-    font-size: inherit;
   }
   
-  .word:hover, .br:hover{
-    background: rgba(72,255,72,0.2);
+  /* Selectable elements */
+  .selectable {
+    cursor: pointer;
+    display: inline;
+    position: relative;
   }
   
-  .word:focus,.br:focus{
-    outline:none;
-    background:var(--g);
-    color:var(--bg);
-    text-shadow:none;
+  .selectable:hover {
+    background: var(--green);
+    color: var(--bg);
+    text-shadow: none;
   }
   
-  .foot{
-    margin-top:6px;
-    display:flex;
-    justify-content:space-between;
-    opacity:.85;
-    color:var(--g);
+  .selectable.selected {
+    background: var(--green);
+    color: var(--bg);
+    text-shadow: none;
   }
   
-  .muted{
-    opacity:.8;
+  .footer {
+    margin-top: 10px;
+    font-size: 12px;
+    opacity: 0.8;
   }
   
-  #msg{
-    color:var(--g);
-    min-height:1.4em;
+  /* Overlay for game end */
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
   }
   
-  .center{
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(0,20,0,.92);
-    font-size:18px;
-    color:var(--g);
-    text-shadow:0 0 5px var(--terminal-glow);
+  .overlay.show {
+    display: flex;
   }
   
-  .hidden{
-    display:none !important;
-  }
-  
-  @media(max-width:700px){
-    .crt{font-size:14px}
-    .grid{grid-template-columns:1fr}
+  .overlay-text {
+    font-size: 24px;
+    text-align: center;
+    text-shadow: 0 0 10px var(--glow);
   }
 </style>
-</head><body>
-  <div class="crt" role="dialog" aria-modal="true" aria-label="Simulated access terminal">
-    <div>
-      <div class="title">Welcome to KnechTelekom VDT 1.0</div>
-      <div>Password Required</div>
-    </div>
-
-    <div class="hud" aria-live="polite">
-      <div class="tries">Attempts Remaining:
-        <span class="b on"></span><span class="b on"></span><span class="b on"></span><span class="b on"></span>
-      </div>
-      <div id="msg"></div>
-    </div>
-
-    <div id="grid" class="grid" tabindex="-1" aria-label="Memory dump grid"></div>
-
-    <div class="foot">
-      <span class="muted">[Enter] submit • Brackets may remove duds or reset tries</span>
-      <span class="muted">No skips; reload if locked</span>
-    </div>
-
-    <div id="center" class="center hidden" role="alert"></div>
+</head>
+<body>
+<div class="terminal">
+  <div class="header">
+    <div class="title">ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</div>
+    <div>ENTER PASSWORD NOW</div>
   </div>
+  
+  <div class="attempts">
+    <span id="attempts-text">4 ATTEMPT(S) LEFT:</span>
+    <span class="attempts-blocks">
+      <span class="block" data-attempt="1"></span>
+      <span class="block" data-attempt="2"></span>
+      <span class="block" data-attempt="3"></span>
+      <span class="block" data-attempt="4"></span>
+    </span>
+  </div>
+  
+  <div id="message"></div>
+  
+  <div class="display" id="display"></div>
+  
+  <div class="footer">
+    >Hints: Matching brackets remove duds or replenish tries
+  </div>
+  
+  <div class="overlay" id="overlay">
+    <div class="overlay-text" id="overlay-text"></div>
+  </div>
+</div>
 
 <script>
-(function(){
-  const OPT={tries:4, wordLength:5, candidateCount:14};
-  
-  // Word bank (all-caps) - expanded for variety
-  const WORDS=("TOMES CASES BOOKS SMOKE MAZES SPREE CRATE TRACE GRACE SLATE STARE SHARE SHORE SCORE SCOPE STONE SHINE CRISP CRASH SNAKE STAKE SHADE TRADE TRUCE TRICK PRIDE PRICE PRIME BRINE BLAME FLAME FRAME CRANE CRANK STEAM DREAM CREAM BREAD BREAK TREAD BLADE GLADE GRADE STORE STORY STORM SCORN STRAP STRIP STRUM STRAY SPRAY SPARK SPEAK SPORE SPOOK SPOON SPOUT SPOKE SNAIL STEEL STEEP STEER SHEER SHEET SHELF SHEAR SHEEN BRAIN TRAIN DRAIN PLAIN CHAIN GRAIN STAIN FLAIR CHAIR BRISK FLASK TRACK STACK SLACK CRACK SMACK BLACK BLANK CLANK FRANK THANK SHARK QUARK STARK").split(/\s+/);
+// Game configuration
+const CONFIG = {
+  wordLength: 5,
+  wordCount: 15,
+  attempts: 4,
+  lineLength: 12,
+  columns: 2
+};
 
-  // Utilities
-  const rnd=n=>Math.floor(Math.random()*n);
-  const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
-  const sample=(arr,n)=>shuffle(arr.slice()).slice(0,n);
-  const likeness=(a,b)=>{let n=0;for(let i=0;i<a.length;i++) if(a[i]===b[i]) n++; return n;}
-  
-  // Audio beep function
-  let audio=null; 
-  function beep(f=750,ms=60){
-    try{
-      audio=audio||new (window.AudioContext||window.webkitAudioContext)();
-      const o=audio.createOscillator(),g=audio.createGain();
-      o.connect(g);
-      g.connect(audio.destination);
-      o.type="square";
-      o.frequency.value=f;
-      g.gain.value=.03;
-      o.start();
-      setTimeout(()=>o.stop(),ms);
-    }catch(e){}
+// Word pool
+const WORD_POOL = [
+  "ABOUT", "AFTER", "AGAIN", "BELOW", "COULD", "EVERY", "FIRST", "FOUND", "GREAT", "HOUSE",
+  "LARGE", "LITTLE", "MIGHT", "NEVER", "OTHER", "PLACE", "RIGHT", "SMALL", "SOUND", "STILL",
+  "THEIR", "THERE", "THESE", "THING", "THINK", "THREE", "UNDER", "WATER", "WHERE", "WHICH",
+  "WHILE", "WORLD", "WOULD", "WRITE", "YEARS", "ABOVE", "BEGAN", "BLACK", "BRING", "BUILD",
+  "CARRY", "CLEAN", "CLOSE", "DRINK", "DRIVE", "EIGHT", "FIGHT", "FORCE", "GREEN", "GROUND",
+  "GUIDE", "HEART", "HEAVY", "LIGHT", "LOCAL", "MARCH", "MUSIC", "NIGHT", "NORTH", "OFTEN",
+  "ORDER", "PAPER", "PARTY", "PEACE", "PIECE", "POINT", "POWER", "PRESS", "PRICE", "PRINT",
+  "QUICK", "QUIET", "REACH", "RIVER", "ROUND", "SERVE", "SHAPE", "SHARP", "SHOOT", "SHORT",
+  "SHOWN", "SIGHT", "SINCE", "SLEEP", "SMOKE", "SOLID", "SOUTH", "SPACE", "SPEAK", "SPEED",
+  "SPEND", "SPOKE", "SPORT", "SPREAD", "SPRING", "STAND", "START", "STATE", "STICK", "STONE",
+  "STOOD", "STORE", "STORY", "STUDY", "STUFF", "TEACH", "THANK", "THICK", "THIRD", "THOSE",
+  "THREW", "THROW", "TOUCH", "TRADE", "TRAIN", "TRIED", "TRIES", "TRUCK", "TRUST", "TRUTH"
+].filter(w => w.length === CONFIG.wordLength);
+
+// Game state
+let gameState = {
+  attempts: CONFIG.attempts,
+  correctWord: "",
+  words: [],
+  usedBrackets: new Set(),
+  locked: false,
+  selectedElement: null
+};
+
+// Utility functions
+function random(max) {
+  return Math.floor(Math.random() * max);
+}
+
+function shuffle(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = random(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
+  return arr;
+}
 
-  // DOM refs
-  const grid=document.getElementById("grid");
-  const msg=document.getElementById("msg");
-  const center=document.getElementById("center");
-  const triesBlocks=[...document.querySelectorAll(".tries .b")];
-  
-  function setTries(n){
-    triesBlocks.forEach((b,i)=>b.classList.toggle("on", i<n));
+function getRandomChar() {
+  const chars = "!@#$%^&*(){}[]<>,.?/|\\-+=_";
+  return chars[random(chars.length)];
+}
+
+function calculateLikeness(word1, word2) {
+  let likeness = 0;
+  for (let i = 0; i < word1.length; i++) {
+    if (word1[i] === word2[i]) likeness++;
   }
+  return likeness;
+}
 
-  // State
-  const state={tries:OPT.tries, answer:null, locked:false, used:new Set()};
+// Generate hex address
+function getHexAddress(index) {
+  const base = 0xF000;
+  return "0x" + (base + index * 0x0C).toString(16).toUpperCase();
+}
 
-  // Generate junk characters
-  function junk(n){
-    const j="(){}[]<>!@#$%^&*+-=;:'/\\|?.,";
-    let s=""; 
-    for(let i=0;i<n;i++) s+=j[rnd(j.length)]; 
-    return s;
-  }
-  
-  // Generate hex addresses
-  function addr(i){ 
-    return "0x"+(0x5ED0+i*0x14).toString(16).toUpperCase(); 
-  }
-  
-  // Generate bracket runs
-  function bracketRun(){
-    const pairs=["()","[]","{}","<>"];
-    const pair = pairs[rnd(pairs.length)];
-    let inner=""; 
-    for(let i=0;i<8+rnd(8);i++) inner+=junk(1);
-    return { 
-      text: pair[0]+inner+pair[1], 
-      key: Date.now()+"-"+Math.random().toString(36).slice(2) 
-    };
-  }
-
-  function render(){
-    // Reset state
-    state.locked=false; 
-    state.used.clear(); 
-    msg.textContent=""; 
-    center.classList.add("hidden");
-    state.tries=OPT.tries; 
-    setTries(state.tries); 
-    grid.innerHTML="";
-    
-    // Get words
-    const wl=OPT.wordLength; 
-    const pool=WORDS.filter(w=>w.length===wl);
-    const words=sample(pool, Math.min(OPT.candidateCount, pool.length));
-    state.answer=words[rnd(words.length)];
-    
-    console.log("Generated words:", words);
-    console.log("Answer:", state.answer);
-
-    const cols=2, rows=16;
-    const perCol=Math.ceil(words.length/cols);
-    const colWords=[words.slice(0,perCol), words.slice(perCol)];
-
-    for(let c=0;c<cols;c++){
-      const col=document.createElement("div");
-      col.style.color = "var(--g)"; // Ensure column has color
-      
-      // Pre-select slots for words
-      const slots=new Set(); 
-      while(slots.size<colWords[c].length && slots.size<rows){ 
-        slots.add(rnd(rows)); 
-      }
-      
-      for(let r=0;r<rows;r++){
-        const row=document.createElement("div"); 
-        row.className="row";
-        
-        // Address
-        const a=document.createElement("span"); 
-        a.className="addr"; 
-        a.textContent=addr(c*rows+r)+" "; 
-        row.appendChild(a);
-
-        // Left junk
-        const left=document.createTextNode(junk(12)+" "); 
-        row.appendChild(left);
-
-        if(slots.has(r) && colWords[c].length>0){
-          // Add word
-          const w=colWords[c].shift();
-          const span=document.createElement("span"); 
-          span.className="word"; 
-          span.tabIndex=0; 
-          span.setAttribute("role","button");
-          span.setAttribute("aria-label", "Password candidate: " + w);
-          span.dataset.w=w; 
-          span.textContent=w;
-          
-          // Debug: log word creation
-          console.log("Creating word element:", w);
-          
-          span.addEventListener("click",()=>guess(w));
-          span.addEventListener("keydown",e=>{ 
-            if(e.key==="Enter") guess(w); 
-          });
-          
-          row.appendChild(span);
-          row.appendChild(document.createTextNode(" "+junk(12)));
-        }else{
-          // Add bracket or junk
-          if(Math.random()<0.4){
-            const run=bracketRun();
-            const b=document.createElement("span"); 
-            b.className="br"; 
-            b.tabIndex=0; 
-            b.setAttribute("role","button"); 
-            b.setAttribute("aria-label", "Bracket run - may provide bonus");
-            b.dataset.key=run.key; 
-            b.textContent=run.text;
-            b.title="Bracket run: bonus";
-            
-            b.addEventListener("click",()=>onBracket(b));
-            b.addEventListener("keydown",e=>{ 
-              if(e.key==="Enter") onBracket(b); 
-            });
-            
-            row.appendChild(b);
-            row.appendChild(document.createTextNode(" "+junk(12)));
-          }else{
-            row.appendChild(document.createTextNode(junk(OPT.wordLength)+" "+junk(12)));
-          }
-        }
-        col.appendChild(row);
-      }
-      grid.appendChild(col);
+// Audio feedback
+let audioContext = null;
+function playSound(frequency = 800, duration = 50) {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
     
-    // Focus grid
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = frequency;
+    oscillator.type = "square";
+    gainNode.gain.value = 0.05;
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + duration / 1000);
+  } catch (e) {
+    // Silent fail if audio not supported
+  }
+}
+
+// Update attempts display
+function updateAttempts() {
+  const blocks = document.querySelectorAll(".block");
+  blocks.forEach((block, index) => {
+    if (index < gameState.attempts) {
+      block.classList.remove("off");
+    } else {
+      block.classList.add("off");
+    }
+  });
+  
+  document.getElementById("attempts-text").textContent = 
+    `${gameState.attempts} ATTEMPT(S) LEFT:`;
+}
+
+// Handle word selection
+function selectWord(element, word) {
+  if (gameState.locked) return;
+  
+  playSound(1000, 30);
+  
+  // Remove previous selection
+  if (gameState.selectedElement) {
+    gameState.selectedElement.classList.remove("selected");
+  }
+  
+  element.classList.add("selected");
+  gameState.selectedElement = element;
+  
+  // Check if correct
+  if (word === gameState.correctWord) {
+  showMessage("> Password accepted.");
+  gameState.locked = true;
+  setTimeout(() => {
+    showOverlay("ACCESS GRANTED");
     setTimeout(() => {
-      grid.focus({preventScroll:true});
-    }, 100);
-  }
-
-  function onBracket(el){
-    if(state.locked) return;
-    const key=el.dataset.key; 
-    if(state.used.has(key)) return; 
-    state.used.add(key);
+      // Redirect to rickroll
+      window.top.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&autoplay=1";
+    }, 1500);
+  }, 1000);
+  } else {
+    const likeness = calculateLikeness(word, gameState.correctWord);
+    showMessage(`> Entry denied. Likeness=${likeness}`);
     
-    if(Math.random()<0.5){
-      // Remove dud
-      const nodes=[...document.querySelectorAll(".word")].filter(n=>n.dataset.w!==state.answer);
-      if(nodes.length){
-        const dud=nodes[rnd(nodes.length)];
-        const len=dud.textContent.length;
-        const replacement = document.createTextNode(junk(len));
-        dud.replaceWith(replacement);
-        msg.textContent="> DUD REMOVED"; 
-        beep(500,60);
+    gameState.attempts--;
+    updateAttempts();
+    
+    if (gameState.attempts <= 0) {
+      gameState.locked = true;
+      setTimeout(() => {
+        showOverlay("TERMINAL LOCKED");
+        playSound(200, 200);
+      }, 1000);
+    }
+  }
+}
+
+// Handle bracket selection
+function selectBracket(element, bracketId) {
+  if (gameState.locked || gameState.usedBrackets.has(bracketId)) return;
+  
+  gameState.usedBrackets.add(bracketId);
+  playSound(600, 40);
+  
+  // Replace bracket content with dots
+  const text = element.textContent;
+  element.textContent = ".".repeat(text.length);
+  element.style.cursor = "default";
+  element.onclick = null;
+  
+  // 50% chance to remove dud or reset tries
+  if (Math.random() < 0.5 && gameState.attempts < CONFIG.attempts) {
+    gameState.attempts = CONFIG.attempts;
+    updateAttempts();
+    showMessage("> Tries reset.");
+  } else {
+    // Remove a dud
+    const wrongWords = gameState.words.filter(w => w !== gameState.correctWord);
+    if (wrongWords.length > 0) {
+      const dudWord = wrongWords[random(wrongWords.length)];
+      // Find and remove the dud from display
+      const elements = document.querySelectorAll(".selectable");
+      elements.forEach(el => {
+        if (el.dataset.word === dudWord && el.dataset.word !== gameState.correctWord) {
+          el.textContent = ".".repeat(dudWord.length);
+          el.style.cursor = "default";
+          el.onclick = null;
+          el.classList.remove("selectable");
+        }
+      });
+      showMessage("> Dud removed.");
+    }
+  }
+}
+
+// Show message
+function showMessage(text) {
+  const messageEl = document.getElementById("message");
+  messageEl.textContent = text;
+}
+
+// Show overlay
+function showOverlay(text) {
+  const overlay = document.getElementById("overlay");
+  const overlayText = document.getElementById("overlay-text");
+  overlayText.textContent = text;
+  overlay.classList.add("show");
+}
+
+// Generate game content
+function generateContent() {
+  const display = document.getElementById("display");
+  display.innerHTML = "";
+  
+  // Select words
+  const selectedWords = shuffle(WORD_POOL).slice(0, CONFIG.wordCount);
+  gameState.words = selectedWords;
+  gameState.correctWord = selectedWords[random(selectedWords.length)];
+  
+  // Create lines of content
+  const totalLines = 17;
+  const wordsPerColumn = Math.ceil(selectedWords.length / CONFIG.columns);
+  let wordIndex = 0;
+  
+  for (let col = 0; col < CONFIG.columns; col++) {
+    for (let line = 0; line < totalLines; line++) {
+      const lineEl = document.createElement("div");
+      lineEl.className = "line";
+      
+      // Add hex address
+      const hexSpan = document.createElement("span");
+      hexSpan.className = "hex";
+      hexSpan.textContent = getHexAddress(col * totalLines + line) + " ";
+      lineEl.appendChild(hexSpan);
+      
+      // Generate line content
+      let lineContent = "";
+      let charCount = 0;
+      
+      while (charCount < CONFIG.lineLength * 2 + CONFIG.wordLength) {
+        // Randomly place words
+        if (wordIndex < wordsPerColumn * (col + 1) && 
+            wordIndex < selectedWords.length && 
+            Math.random() < 0.3 && 
+            charCount + CONFIG.wordLength <= CONFIG.lineLength * 2) {
+          
+          const word = selectedWords[wordIndex];
+          const wordSpan = document.createElement("span");
+          wordSpan.className = "selectable";
+          wordSpan.textContent = word;
+          wordSpan.dataset.word = word;
+          wordSpan.onclick = () => selectWord(wordSpan, word);
+          
+          lineEl.appendChild(wordSpan);
+          wordIndex++;
+          charCount += word.length;
+          
+        } else if (Math.random() < 0.2 && charCount + 4 <= CONFIG.lineLength * 2) {
+          // Add brackets
+          const brackets = ["()", "[]", "{}", "<>"];
+          const bracket = brackets[random(brackets.length)];
+          const contentLength = 3 + random(5);
+          let bracketContent = bracket[0];
+          
+          for (let i = 0; i < contentLength; i++) {
+            bracketContent += getRandomChar();
+          }
+          bracketContent += bracket[1];
+          
+          const bracketSpan = document.createElement("span");
+          bracketSpan.className = "selectable";
+          bracketSpan.textContent = bracketContent;
+          const bracketId = `bracket-${col}-${line}-${charCount}`;
+          bracketSpan.onclick = () => selectBracket(bracketSpan, bracketId);
+          
+          lineEl.appendChild(bracketSpan);
+          charCount += bracketContent.length;
+          
+        } else {
+          // Add random character
+          const char = getRandomChar();
+          lineEl.appendChild(document.createTextNode(char));
+          charCount++;
+        }
+        
+        // Add space occasionally
+        if (charCount < CONFIG.lineLength * 2 && Math.random() < 0.3) {
+          lineEl.appendChild(document.createTextNode(" "));
+          charCount++;
+        }
       }
-    }else{
-      // Reset tries
-      state.tries=OPT.tries; 
-      setTries(state.tries); 
-      msg.textContent="> TRIES RESET"; 
-      beep(500,60);
+      
+      display.appendChild(lineEl);
     }
     
-    // Replace bracket with dots
-    el.textContent=el.textContent.replace(/./g,".");
-    el.classList.remove("br");
-    el.removeAttribute("tabindex");
-    el.style.cursor = "default";
-  }
-
-  function guess(w){
-    if(state.locked) return; 
-    beep(900,50);
-    
-    if(w===state.answer){ 
-      msg.textContent="> PASSWORD ACCEPTED: "+w; 
-      win(); 
-      return; 
+    // Add column separator
+    if (col < CONFIG.columns - 1) {
+      const separator = document.createElement("div");
+      separator.style.height = "10px";
+      display.appendChild(separator);
     }
-    
-    const like = likeness(w,state.answer);
-    msg.textContent="> LIKENESS = "+like;
-    state.tries--; 
-    setTries(state.tries); 
-    
-    if(state.tries<=0) lockout();
   }
+}
 
-  function win(){
-    state.locked=true; 
-    center.textContent="PASSWORD ACCEPTED"; 
-    center.classList.remove("hidden");
-    beep(1200, 100);
-    setTimeout(()=>{ 
-      beep(1500, 100);
-      try{ 
-        parent.postMessage({type:"KNECH_VDT",action:"close"},"*"); 
-      }catch(e){} 
-    }, 900);
+// Initialize game
+function init() {
+  updateAttempts();
+  generateContent();
+  showMessage("");
+  
+  console.log("Debug - Correct word:", gameState.correctWord);
+  console.log("Debug - All words:", gameState.words);
+}
+
+// Start the game
+init();
+
+// Handle iframe closing
+window.addEventListener("message", function(e) {
+  if (e.data && e.data.type === "KNECH_VDT" && e.data.action === "close") {
+    const iframe = parent.document.getElementById("knech-vdt");
+    if (iframe) iframe.remove();
   }
-
-  function lockout(){
-    state.locked=true; 
-    center.textContent="TERMINAL LOCKED — RELOAD PAGE TO TRY AGAIN";
-    center.classList.remove("hidden"); 
-    beep(180,120);
-  }
-
-  // Initialize game
-  render();
-})();
+});
 </script>
-</body></html>'>
+</body>
+</html>'>
 </iframe>
 
 <script>
-  // Remove the iframe after a successful hack
+  // Remove the iframe after successful hack
   window.addEventListener('message', function(e){
     if(e && e.data && e.data.type==='KNECH_VDT' && e.data.action==='close'){
       var f=document.getElementById('knech-vdt'); 
@@ -462,4 +572,3 @@
     }
   });
 </script>
-<!-- ===== End embed ===== -->
