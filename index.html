@@ -1,4 +1,4 @@
-<!-- ===== Fallout Terminal Hacking Mini-Game ===== -->
+<!-- get ouuta here -->
 <iframe id="knech-vdt"
         allow="autoplay"
         style="position:fixed;inset:0;width:100vw;height:100vh;border:0;z-index:2147483647;"
@@ -245,10 +245,10 @@
 // Game configuration
 const CONFIG = {
   wordLength: 5,
-  wordCount: 15,
+  wordCount: 60,
   attempts: 4,
-  lineLength: 12,
-  columns: 2
+  lineLength: 19,
+  columns: 1
 };
 
 // Word pool
@@ -365,15 +365,15 @@ function selectWord(element, word) {
   
   // Check if correct
   if (word === gameState.correctWord) {
-    showMessage("> Password accepted.");
-    gameState.locked = true;
+  showMessage("> Password accepted.");
+  gameState.locked = true;
+  setTimeout(() => {
+    showOverlay("ACCESS GRANTED");
     setTimeout(() => {
-      showOverlay("ACCESS GRANTED");
-      setTimeout(() => {
-        // Close the terminal
-        parent.postMessage({ type: "KNECH_VDT", action: "close" }, "*");
-      }, 1500);
-    }, 1000);
+      // Redirect to rickroll
+      window.top.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&autoplay=1";
+    }, 1500);
+  }, 1000);
   } else {
     const likeness = calculateLikeness(word, gameState.correctWord);
     showMessage(`> Entry denied. Likeness=${likeness}`);
@@ -574,13 +574,3 @@ window.addEventListener("message", function(e) {
 </body>
 </html>'>
 </iframe>
-
-<script>
-  // Remove the iframe after successful hack
-  window.addEventListener('message', function(e){
-    if(e && e.data && e.data.type==='KNECH_VDT' && e.data.action==='close'){
-      var f=document.getElementById('knech-vdt'); 
-      if(f) f.remove();
-    }
-  });
-</script>
