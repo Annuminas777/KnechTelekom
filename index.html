@@ -1,577 +1,294 @@
-<!-- get outta here -->
-<iframe id="knech-vdt"
-        allow="autoplay"
-        style="position:fixed;inset:0;width:100vw;height:100vh;border:0;z-index:2147483647;"
-        srcdoc='<!doctype html><html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Terminal Hacking</title>
-<style>
-  /* CSS Reset */
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  :root {
-    --green: #41ff00;
-    --dark-green: #001100;
-    --bg: #000000;
-    --glow: #41ff00;
-  }
-  
-  html, body {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    background: #000;
-  }
-  
-  body {
-    font-family: "Courier New", Courier, monospace;
-    font-size: 14px;
-    line-height: 1.2;
-    color: var(--green);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-transform: uppercase;
-  }
-  
-  .terminal {
-    width: 100%;
-    max-width: 800px;
-    height: 100%;
-    max-height: 600px;
-    background: var(--bg);
-    border: 2px solid #1a1a1a;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    text-shadow: 0 0 5px var(--glow);
-  }
-  
-  /* Scanline effect */
-  .terminal::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      transparent 0%,
-      transparent 50%,
-      rgba(65, 255, 0, 0.03) 50%,
-      rgba(65, 255, 0, 0.03) 100%
-    );
-    background-size: 100% 4px;
-    pointer-events: none;
-    z-index: 1;
-  }
-  
-  /* Flicker effect */
-  @keyframes flicker {
-    0% { opacity: 0.95; }
-    50% { opacity: 1; }
-    100% { opacity: 0.98; }
-  }
-  
-  .terminal > * {
-    position: relative;
-    z-index: 2;
-    animation: flicker 0.15s infinite;
-  }
-  
-  .header {
-    margin-bottom: 10px;
-  }
-  
-  .title {
-    font-size: 16px;
-    margin-bottom: 5px;
-  }
-  
-  .attempts {
-    margin: 10px 0;
-    font-size: 14px;
-  }
-  
-  .attempts-blocks {
-    display: inline-block;
-    margin-left: 10px;
-  }
-  
-  .block {
-    display: inline-block;
-    width: 10px;
-    height: 12px;
-    background: var(--green);
-    margin-right: 3px;
-    vertical-align: middle;
-  }
-  
-  .block.off {
-    background: transparent;
-    border: 1px solid var(--green);
-  }
-  
-  #message {
-    height: 20px;
-    margin: 5px 0;
-  }
-  
-  /* Main terminal display */
-  .display {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background: rgba(0, 17, 0, 0.5);
-    border: 1px solid var(--green);
-    padding: 10px;
-    font-family: "Courier New", Courier, monospace;
-    white-space: pre;
-    letter-spacing: 0.05em;
-  }
-  
-  .display::-webkit-scrollbar {
-    width: 10px;
-  }
-  
-  .display::-webkit-scrollbar-track {
-    background: var(--dark-green);
-  }
-  
-  .display::-webkit-scrollbar-thumb {
-    background: var(--green);
-  }
-  
-  /* Terminal lines */
-  .line {
-    margin: 2px 0;
-    font-size: 14px;
-    display: block;
-  }
-  
-  .hex {
-    color: var(--green);
-    opacity: 0.8;
-    display: inline;
-  }
-  
-  /* Selectable elements */
-  .selectable {
-    cursor: pointer;
-    display: inline;
-    position: relative;
-  }
-  
-  .selectable:hover {
-    background: var(--green);
-    color: var(--bg);
-    text-shadow: none;
-  }
-  
-  .selectable.selected {
-    background: var(--green);
-    color: var(--bg);
-    text-shadow: none;
-  }
-  
-  .footer {
-    margin-top: 10px;
-    font-size: 12px;
-    opacity: 0.8;
-  }
-  
-  /* Overlay for game end */
-  .overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.9);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-  }
-  
-  .overlay.show {
-    display: flex;
-  }
-  
-  .overlay-text {
-    font-size: 24px;
-    text-align: center;
-    text-shadow: 0 0 10px var(--glow);
-  }
-</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1d2022">
+  <meta name="color-scheme" content="dark">
+
+  <title>Gabriel Knechtel</title>
+  <meta name="description" content="Gabriel Knechtel">
+  <link rel="canonical" href="https://knech.tel/">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Gabriel Knechtel">
+  <meta property="og:description" content="Gabriel Knechtel">
+  <meta property="og:url" content="https://knech.tel/">
+  <meta property="og:image" content="https://knech.tel/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gabriel Knechtel">
+  <meta name="twitter:description" content="Gabriel Knechtel">
+  <meta name="twitter:image" content="https://knech.tel/og-image.png">
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+  <style>
+    :root {
+      --bg: #1d2022;
+      --fg: #f2f2f2;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      background: var(--bg);
+      overflow: hidden;
+      color: var(--fg);
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    /* The hidden defs block holds the single source of truth for the icon. */
+    .defs {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .icon {
+      width: clamp(140px, 22vmin, 280px);
+      aspect-ratio: 171 / 193;
+      display: block;
+      position: relative;
+      z-index: 2;
+    }
+
+    @media (max-width: 768px) {
+      .icon {
+        width: clamp(110px, 30vw, 200px);
+      }
+    }
+
+    #floaters {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .floater {
+      position: absolute;
+      aspect-ratio: 171 / 193;
+      opacity: 0;
+      display: block;
+      transform-origin: center center;
+      /* Per-element transitions set inline by JS so each floater has its own clock */
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .floater {
+        transition: none !important;
+      }
+    }
+  </style>
 </head>
 <body>
-<div class="terminal">
-  <div class="header">
-    <div class="title">Welcome to KnechTelekom VDT 4.0</div>
-    <div>ENTER PASSWORD</div>
-  </div>
-  
-  <div class="attempts">
-    <span id="attempts-text">4 ATTEMPT(S) LEFT:</span>
-    <span class="attempts-blocks">
-      <span class="block" data-attempt="1"></span>
-      <span class="block" data-attempt="2"></span>
-      <span class="block" data-attempt="3"></span>
-      <span class="block" data-attempt="4"></span>
-    </span>
-  </div>
-  
-  <div id="message"></div>
-  
-  <div class="display" id="display"></div>
-  
-  <div class="footer">
-    Copyright 2077 KnechTelekom Industries
-  </div>
-  
-  <div class="overlay" id="overlay">
-    <div class="overlay-text" id="overlay-text"></div>
-  </div>
-</div>
 
-<script>
-// Game configuration
-const CONFIG = {
-  wordLength: 5,
-  wordCount: 60,
-  attempts: 4,
-  lineLength: 19,
-  columns: 1
-};
+  <!-- Single source of truth for the icon: defined once, referenced by <use> -->
+  <svg class="defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <g id="knechtel-icon">
+        <path d="M5.17415 63.011C2.96018 62.5816 1.5609 61.2254 1.26671 59.2287C0.893314 56.7122 0.538777 54.2748 0.512376 51.6264L0.101267 12.9028C0.0673216 9.76848 0.346422 6.94681 0.663242 3.8878C0.825424 2.3357 2.21718 0.990788 3.75602 0.753451C7.19201 0.222269 10.2885 0.0452084 13.9546 0.0452085L138.978 7.00523e-06C141.392 7.11075e-06 148.022 0.158232 149.305 1.43533C150.832 2.96107 147.743 8.09583 146.536 10.164L121.179 53.6193C119.539 56.4334 117.434 57.8913 114.307 58.7729L71.8045 70.749C61.0401 73.7816 57.8531 73.2014 46.8474 71.0729L5.17039 63.011L5.17415 63.011Z" fill="#F2F2F2"/>
+        <path d="M3.0055 136.265C8.30093 134.118 13.2833 132.773 18.6353 131.247L51.1546 121.991C57.4948 120.187 63.8652 119.704 70.3713 121.113L86.9365 124.707C94.2271 126.29 101.197 128.038 108.36 130.03C116.031 132.159 117.845 135.606 121.394 142.12L141.728 179.423C143.21 182.143 147.411 189.195 145.937 191.263C145.526 191.843 144.228 192.427 143.331 192.45L124.291 193L14.3092 192.977C10.6695 192.977 7.45985 192.721 4.07289 192.329C1.742 192.058 0.550148 190.299 0.429455 188.02C-0.241902 175.46 -0.177786 151.545 0.991432 139.155C1.10081 137.979 1.78349 136.763 3.00174 136.269L3.0055 136.265Z" fill="#F2F2F2"/>
+        <path d="M108.888 98.1746C108.744 94.7916 109.714 92.3918 112.278 90.3801L117.532 86.2587L132.947 74.6104C136.609 71.8415 138.661 68.304 140.004 63.9566L148.177 37.4729C150.131 31.1439 161.265 16.6776 165.764 10.9137C166.39 10.1113 167.812 9.22978 168.793 9.22224C169.623 9.21848 170.404 10.9363 170.419 11.8179L170.913 45.3087L171.003 143.54L170.426 182.361C170.404 183.891 169.975 186.367 168.857 186.663C167.42 187.044 165.063 184.381 163.777 182.478C157.297 172.913 151.5 163.126 145.824 153.022C140.385 143.344 141.524 136.13 137.873 125.193C136.685 121.633 134.592 118.857 131.397 116.973L113.908 106.662C110.672 104.752 109.057 102.062 108.891 98.1746L108.888 98.1746Z" fill="#F2F2F2"/>
+      </g>
+    </defs>
+  </svg>
 
-// Word pool
-const WORD_POOL = [
-  "ABOUT", "AFTER", "AGAIN", "BELOW", "COULD", "EVERY", "FIRST", "FOUND", "GREAT", "HOUSE",
-  "LARGE", "LITTLE", "MIGHT", "NEVER", "OTHER", "PLACE", "RIGHT", "SMALL", "SOUND", "STILL",
-  "THEIR", "THERE", "THESE", "THING", "THINK", "THREE", "UNDER", "WATER", "WHERE", "WHICH",
-  "WHILE", "WORLD", "WOULD", "WRITE", "YEARS", "ABOVE", "BEGAN", "BLACK", "BRING", "BUILD",
-  "CARRY", "CLEAN", "CLOSE", "DRINK", "DRIVE", "EIGHT", "FIGHT", "FORCE", "GREEN", "GROUND",
-  "GUIDE", "HEART", "HEAVY", "LIGHT", "LOCAL", "MARCH", "MUSIC", "NIGHT", "NORTH", "OFTEN",
-  "ORDER", "PAPER", "PARTY", "PEACE", "PIECE", "POINT", "POWER", "PRESS", "PRICE", "PRINT",
-  "QUICK", "QUIET", "REACH", "RIVER", "ROUND", "SERVE", "SHAPE", "SHARP", "SHOOT", "SHORT",
-  "SHOWN", "SIGHT", "SINCE", "SLEEP", "SMOKE", "SOLID", "SOUTH", "SPACE", "SPEAK", "SPEED",
-  "SPEND", "SPOKE", "SPORT", "SPREAD", "SPRING", "STAND", "START", "STATE", "STICK", "STONE",
-  "STOOD", "STORE", "STORY", "STUDY", "STUFF", "TEACH", "THANK", "THICK", "THIRD", "THOSE",
-  "THREW", "THROW", "TOUCH", "TRADE", "TRAIN", "TRIED", "TRIES", "TRUCK", "TRUST", "TRUTH"
-].filter(w => w.length === CONFIG.wordLength);
+  <div id="floaters" aria-hidden="true"></div>
 
-// Game state
-let gameState = {
-  attempts: CONFIG.attempts,
-  correctWord: "",
-  words: [],
-  usedBrackets: new Set(),
-  locked: false,
-  selectedElement: null
-};
+  <svg class="icon" viewBox="0 0 171 193" role="img" aria-label="Gabriel Knechtel">
+    <use href="#knechtel-icon"/>
+  </svg>
 
-// Utility functions
-function random(max) {
-  return Math.floor(Math.random() * max);
-}
+  <script>
+    (function () {
+      'use strict';
 
-function shuffle(array) {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = random(i + 1);
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
+      // ---- Tunables ----
+      const COUNT_DESKTOP = 6;
+      const COUNT_MOBILE = 3;
+      const MOBILE_BREAKPOINT = 768;
 
-function getRandomChar() {
-  const chars = "!@#$%^&*(){}[]<>,.?/|\\-+=_";
-  return chars[random(chars.length)];
-}
+      const FADE_IN_MS = 2500;
+      const HOLD_MS = 1500;
+      const FADE_OUT_MS = 3000;
+      const WAIT_MIN_MS = 8000;
+      const WAIT_MAX_MS = 20000;
 
-function calculateLikeness(word1, word2) {
-  let likeness = 0;
-  for (let i = 0; i < word1.length; i++) {
-    if (word1[i] === word2[i]) likeness++;
-  }
-  return likeness;
-}
+      const OPACITY_MIN = 0.04;
+      const OPACITY_MAX = 0.09;
 
-// Generate hex address
-function getHexAddress(index) {
-  const base = 0xF000;
-  return "0x" + (base + index * 0x0C).toString(16).toUpperCase();
-}
+      const SIZE_MIN_RATIO = 0.20;
+      const SIZE_MAX_RATIO = 0.80;
 
-// Audio feedback
-let audioContext = null;
-function playSound(frequency = 800, duration = 50) {
-  try {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = frequency;
-    oscillator.type = "square";
-    gainNode.gain.value = 0.05;
-    
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + duration / 1000);
-  } catch (e) {
-    // Silent fail if audio not supported
-  }
-}
+      const CENTER_BUFFER = 0.40;   // 40% buffer around the center icon
+      const INITIAL_STAGGER_MS = 10000;
 
-// Update attempts display
-function updateAttempts() {
-  const blocks = document.querySelectorAll(".block");
-  blocks.forEach((block, index) => {
-    if (index < gameState.attempts) {
-      block.classList.remove("off");
-    } else {
-      block.classList.add("off");
-    }
-  });
-  
-  document.getElementById("attempts-text").textContent = 
-    `${gameState.attempts} ATTEMPT(S) LEFT:`;
-}
+      const ICON_W = 171;
+      const ICON_H = 193;
+      const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// Handle word selection
-function selectWord(element, word) {
-  if (gameState.locked) return;
-  
-  playSound(1000, 30);
-  
-  // Remove previous selection
-  if (gameState.selectedElement) {
-    gameState.selectedElement.classList.remove("selected");
-  }
-  
-  element.classList.add("selected");
-  gameState.selectedElement = element;
-  
-  // Check if correct
-  if (word === gameState.correctWord) {
-  showMessage("> Password accepted.");
-  gameState.locked = true;
-  setTimeout(() => {
-    showOverlay("ACCESS GRANTED");
-    setTimeout(() => {
-      // Redirect to rickroll
-      window.top.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&autoplay=1";
-    }, 1500);
-  }, 1000);
-  } else {
-    const likeness = calculateLikeness(word, gameState.correctWord);
-    showMessage(`> Entry denied. Likeness=${likeness}`);
-    
-    gameState.attempts--;
-    updateAttempts();
-    
-    if (gameState.attempts <= 0) {
-      gameState.locked = true;
-      setTimeout(() => {
-        showOverlay("TERMINAL LOCKED");
-        playSound(200, 200);
-      }, 1000);
-    }
-  }
-}
+      // ---- State ----
+      const layer = document.getElementById('floaters');
+      const centerIcon = document.querySelector('.icon');
+      const prefersReducedMotion =
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Handle bracket selection
-function selectBracket(element, bracketId) {
-  if (gameState.locked || gameState.usedBrackets.has(bracketId)) return;
-  
-  gameState.usedBrackets.add(bracketId);
-  playSound(600, 40);
-  
-  // Replace bracket content with dots
-  const text = element.textContent;
-  element.textContent = ".".repeat(text.length);
-  element.style.cursor = "default";
-  element.onclick = null;
-  
-  // 50% chance to remove dud or reset tries
-  if (Math.random() < 0.5 && gameState.attempts < CONFIG.attempts) {
-    gameState.attempts = CONFIG.attempts;
-    updateAttempts();
-    showMessage("> Tries reset.");
-  } else {
-    // Remove a dud (costs an attempt)
-    const wrongWords = gameState.words.filter(w => w !== gameState.correctWord);
-    if (wrongWords.length > 0) {
-      const dudWord = wrongWords[random(wrongWords.length)];
-      // Find and remove the dud from display
-      const elements = document.querySelectorAll(".selectable");
-      elements.forEach(el => {
-        if (el.dataset.word === dudWord && el.dataset.word !== gameState.correctWord) {
-          el.textContent = ".".repeat(dudWord.length);
-          el.style.cursor = "default";
-          el.onclick = null;
-          el.classList.remove("selectable");
-        }
-      });
-      showMessage("> Dud removed.");
-      
-      // Cost an attempt for dud removal
-      gameState.attempts--;
-      updateAttempts();
-      
-      if (gameState.attempts <= 0) {
-        gameState.locked = true;
-        setTimeout(() => {
-          showOverlay("TERMINAL LOCKED");
-          playSound(200, 200);
-        }, 1000);
+      const rand = (min, max) => min + Math.random() * (max - min);
+      const isMobile = () =>
+        window.matchMedia('(max-width: ' + MOBILE_BREAKPOINT + 'px)').matches;
+
+      function getCenterExclusionRect() {
+        const r = centerIcon.getBoundingClientRect();
+        const bx = r.width * CENTER_BUFFER;
+        const by = r.height * CENTER_BUFFER;
+        return {
+          left: r.left - bx,
+          right: r.right + bx,
+          top: r.top - by,
+          bottom: r.bottom + by
+        };
       }
-    }
-  }
-}
 
-// Show message
-function showMessage(text) {
-  const messageEl = document.getElementById("message");
-  messageEl.textContent = text;
-}
+      function overlapsCenter(x, y, w, h) {
+        const c = getCenterExclusionRect();
+        return !(x + w < c.left || x > c.right || y + h < c.top || y > c.bottom);
+      }
 
-// Show overlay
-function showOverlay(text) {
-  const overlay = document.getElementById("overlay");
-  const overlayText = document.getElementById("overlay-text");
-  overlayText.textContent = text;
-  overlay.classList.add("show");
-}
+      function pickParams() {
+        const centerW = centerIcon.getBoundingClientRect().width;
+        const ratio = rand(SIZE_MIN_RATIO, SIZE_MAX_RATIO);
+        const width = centerW * ratio;
+        const height = width * (ICON_H / ICON_W);
 
-// Generate game content
-function generateContent() {
-  const display = document.getElementById("display");
-  display.innerHTML = "";
-  
-  // Select words
-  const selectedWords = shuffle(WORD_POOL).slice(0, CONFIG.wordCount);
-  gameState.words = selectedWords;
-  gameState.correctWord = selectedWords[random(selectedWords.length)];
-  
-  // Create lines of content
-  const totalLines = 20;
-  const wordsPerColumn = Math.ceil(selectedWords.length / CONFIG.columns);
-  let wordIndex = 0;
-  
-  for (let col = 0; col < CONFIG.columns; col++) {
-    for (let line = 0; line < totalLines; line++) {
-      const lineEl = document.createElement("div");
-      lineEl.className = "line";
-      
-      // Add hex address
-      const hexSpan = document.createElement("span");
-      hexSpan.className = "hex";
-      hexSpan.textContent = getHexAddress(col * totalLines + line) + " ";
-      lineEl.appendChild(hexSpan);
-      
-      // Generate line content
-      let lineContent = "";
-      let charCount = 0;
-      
-      while (charCount < CONFIG.lineLength * 2 + CONFIG.wordLength) {
-        // Randomly place words
-        if (wordIndex < wordsPerColumn * (col + 1) && 
-            wordIndex < selectedWords.length && 
-            Math.random() < 0.3 && 
-            charCount + CONFIG.wordLength <= CONFIG.lineLength * 2) {
-          
-          const word = selectedWords[wordIndex];
-          const wordSpan = document.createElement("span");
-          wordSpan.className = "selectable";
-          wordSpan.textContent = word;
-          wordSpan.dataset.word = word;
-          wordSpan.onclick = () => selectWord(wordSpan, word);
-          
-          lineEl.appendChild(wordSpan);
-          wordIndex++;
-          charCount += word.length;
-          
-        } else if (Math.random() < 0.2 && charCount + 4 <= CONFIG.lineLength * 2) {
-          // Add brackets
-          const brackets = ["()", "[]", "{}", "<>"];
-          const bracket = brackets[random(brackets.length)];
-          const contentLength = 3 + random(5);
-          let bracketContent = bracket[0];
-          
-          for (let i = 0; i < contentLength; i++) {
-            bracketContent += getRandomChar();
+        // Try to find a position outside the exclusion zone.
+        // Cap attempts so we never block.
+        let x = 0, y = 0;
+        for (let i = 0; i < 80; i++) {
+          x = rand(0, Math.max(0, window.innerWidth - width));
+          y = rand(0, Math.max(0, window.innerHeight - height));
+          if (!overlapsCenter(x, y, width, height)) break;
+        }
+
+        return {
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+          rotation: Math.random() * 360,
+          opacity: rand(OPACITY_MIN, OPACITY_MAX)
+        };
+      }
+
+      function createFloater() {
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('viewBox', '0 0 ' + ICON_W + ' ' + ICON_H);
+        svg.setAttribute('aria-hidden', 'true');
+        svg.classList.add('floater');
+
+        const use = document.createElementNS(SVG_NS, 'use');
+        use.setAttribute('href', '#knechtel-icon');
+        svg.appendChild(use);
+
+        layer.appendChild(svg);
+        return svg;
+      }
+
+      function applyPosition(el, p) {
+        el.style.left = p.x + 'px';
+        el.style.top = p.y + 'px';
+        el.style.width = p.width + 'px';
+        el.style.height = p.height + 'px';
+        el.style.transform = 'rotate(' + p.rotation + 'deg)';
+      }
+
+      function cycle(el) {
+        const p = pickParams();
+        applyPosition(el, p);
+
+        // Set fade-in transition before opacity change
+        el.style.transition = 'opacity ' + FADE_IN_MS + 'ms ease-out';
+        el.style.opacity = '0';
+
+        // Force reflow so the transition applies to the next opacity change
+        void el.offsetWidth;
+        el.style.opacity = String(p.opacity);
+
+        // Schedule fade out after fade-in completes + hold
+        setTimeout(function () {
+          el.style.transition = 'opacity ' + FADE_OUT_MS + 'ms ease-in';
+          el.style.opacity = '0';
+
+          // After fade-out completes, wait, then cycle again
+          setTimeout(function () {
+            const wait = rand(WAIT_MIN_MS, WAIT_MAX_MS);
+            setTimeout(function () { cycle(el); }, wait);
+          }, FADE_OUT_MS);
+        }, FADE_IN_MS + HOLD_MS);
+      }
+
+      function placeStatic(el) {
+        // Reduced-motion fallback: a single static placement at low opacity.
+        const p = pickParams();
+        applyPosition(el, p);
+        el.style.transition = 'none';
+        el.style.opacity = String(p.opacity);
+      }
+
+      function init() {
+        // Wait until layout has measured the center icon
+        if (!centerIcon.getBoundingClientRect().width) {
+          requestAnimationFrame(init);
+          return;
+        }
+
+        const count = isMobile() ? COUNT_MOBILE : COUNT_DESKTOP;
+
+        for (let i = 0; i < count; i++) {
+          const el = createFloater();
+          if (prefersReducedMotion) {
+            placeStatic(el);
+          } else {
+            // Stagger first appearances so they never sync
+            const delay = Math.random() * INITIAL_STAGGER_MS;
+            setTimeout(function () { cycle(el); }, delay);
           }
-          bracketContent += bracket[1];
-          
-          const bracketSpan = document.createElement("span");
-          bracketSpan.className = "selectable";
-          bracketSpan.textContent = bracketContent;
-          const bracketId = `bracket-${col}-${line}-${charCount}`;
-          bracketSpan.onclick = () => selectBracket(bracketSpan, bracketId);
-          
-          lineEl.appendChild(bracketSpan);
-          charCount += bracketContent.length;
-          
-        } else {
-          // Add random character
-          const char = getRandomChar();
-          lineEl.appendChild(document.createTextNode(char));
-          charCount++;
-        }
-        
-        // Add space occasionally
-        if (charCount < CONFIG.lineLength * 2 && Math.random() < 0.3) {
-          lineEl.appendChild(document.createTextNode(" "));
-          charCount++;
         }
       }
-      
-      display.appendChild(lineEl);
-    }
-    
-    // Add column separator
-    if (col < CONFIG.columns - 1) {
-      const separator = document.createElement("div");
-      separator.style.height = "10px";
-      display.appendChild(separator);
-    }
-  }
-}
 
-// Initialize game
-function init() {
-  updateAttempts();
-  generateContent();
-  showMessage("");
-  
-  console.log("Debug - Correct word:", gameState.correctWord);
-  console.log("Debug - All words:", gameState.words);
-}
-
-// Start the game
-init();
-
-// Handle iframe closing
-window.addEventListener("message", function(e) {
-  if (e.data && e.data.type === "KNECH_VDT" && e.data.action === "close") {
-    const iframe = parent.document.getElementById("knech-vdt");
-    if (iframe) iframe.remove();
-  }
-});
-</script>
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
 </body>
-</html>'>
-</iframe>
-
+</html>
