@@ -19,6 +19,7 @@
   <meta property="og:image" content="https://knech.tel/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Knechtel mark, out of register">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
@@ -32,26 +33,38 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
   <style>
+    /* ------------------------------------------------------------------
+       Palette (brand)
+       Nile Mist  #f7f7f7 · Fresh Posho #f2f2f2 · Shoebill Plume #d8dadb
+       Mount Elgon #31393c · Tehom #1d2022
+       Lake Victoria #68a9b9 · Sipi Firefall #fc7a1e
+    ------------------------------------------------------------------ */
     :root {
-      --bg: #1d2022;
-      --fg: #f2f2f2;
+      --tehom: #1d2022;
+      --posho: #f2f2f2;
+      --mist: #f7f7f7;
+      --plume: #d8dadb;
+      --elgon: #31393c;
+      --lake: #68a9b9;
+      --sipi: #fc7a1e;
+      --serif: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+      --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     }
 
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       height: 100%;
       width: 100%;
-      background: var(--bg);
+      background: var(--tehom);
+      color: var(--posho);
       overflow: hidden;
-      color: var(--fg);
       -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
+      touch-action: none;
+      overscroll-behavior: none;
     }
 
     body {
@@ -59,228 +72,823 @@
       inset: 0;
       display: grid;
       place-items: center;
+      /* faint vignette within the Tehom family */
+      background:
+        radial-gradient(120% 120% at 50% 42%, var(--tehom) 0%, #17191b 100%);
     }
 
-    /* The hidden defs block holds the single source of truth for the icon. */
     .defs {
       position: absolute;
-      width: 0;
-      height: 0;
+      width: 0; height: 0;
       overflow: hidden;
       pointer-events: none;
     }
 
-    .icon {
-      width: clamp(140px, 22vmin, 280px);
-      aspect-ratio: 171 / 193;
-      display: block;
+    /* ---- Stage & mark ------------------------------------------------ */
+    .stage {
       position: relative;
+      display: grid;
+      place-items: center;
       z-index: 2;
     }
 
+    .mark {
+      position: relative;
+      width: clamp(140px, 22vmin, 280px);
+      aspect-ratio: 171 / 193;
+    }
     @media (max-width: 768px) {
-      .icon {
-        width: clamp(110px, 30vw, 200px);
-      }
+      .mark { width: clamp(120px, 32vw, 210px); }
     }
 
-    #floaters {
+    .frag {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      mix-blend-mode: screen;
+      will-change: transform;
+      fill: var(--posho);
+    }
+
+    .bloom {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 240%;
+      aspect-ratio: 1;
+      transform: translate(-50%, -50%) scale(0.6);
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(247, 247, 247, 0.22) 0%,
+        rgba(247, 247, 247, 0.06) 38%,
+        rgba(247, 247, 247, 0) 68%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .bloom.pulse {
+      animation: bloom 1600ms ease-out forwards;
+    }
+    @keyframes bloom {
+      0%   { opacity: 0;   transform: translate(-50%, -50%) scale(0.55); }
+      18%  { opacity: 1;   transform: translate(-50%, -50%) scale(0.9); }
+      100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.25); }
+    }
+
+    /* ---- Revealed text ---------------------------------------------- */
+    .line {
+      appearance: none;
+      background: none;
+      border: 0;
+      border-bottom: 1px dotted rgba(216, 218, 219, 0.45);
+      color: var(--posho);
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: clamp(1.02rem, 2.6vmin, 1.3rem);
+      letter-spacing: 0.02em;
+      padding: 0.65em 0.35em 0.35em;
+      margin-top: clamp(20px, 4.5vmin, 40px);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 1400ms ease, transform 1400ms ease, border-color 300ms ease;
+      pointer-events: none;
+    }
+    .line.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .line:hover, .line:focus-visible {
+      border-bottom-color: var(--lake);
+    }
+    .line:focus-visible {
+      outline: 1px solid rgba(216, 218, 219, 0.6);
+      outline-offset: 4px;
+    }
+
+    .name {
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.62em;
+      text-indent: 0.62em; /* optical centering for tracked caps */
+      color: rgba(216, 218, 219, 0.42);
+      margin-top: 18px;
+      opacity: 0;
+      transition: opacity 1800ms ease 300ms;
+    }
+    .name.show { opacity: 1; }
+
+    /* ---- Cue & hint --------------------------------------------------- */
+    .cue {
+      position: fixed;
+      left: 50%;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 14vh);
+      transform: translateX(-50%);
+      font-family: var(--sans);
+      font-size: 10px;
+      letter-spacing: 0.5em;
+      text-indent: 0.5em;
+      text-transform: uppercase;
+      color: rgba(216, 218, 219, 0.55);
+      animation: cuepulse 3.2s ease-in-out infinite;
+      transition: opacity 900ms ease;
+      pointer-events: none;
+      z-index: 3;
+    }
+    .cue.gone { opacity: 0 !important; animation: none; }
+    @keyframes cuepulse {
+      0%, 100% { opacity: 0.18; }
+      50%      { opacity: 0.6; }
+    }
+
+    .hint {
+      position: fixed;
+      left: 50%;
+      top: 68%;
+      transform: translateX(-50%);
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 0.95rem;
+      letter-spacing: 0.18em;
+      color: rgba(216, 218, 219, 0.0);
+      pointer-events: none;
+      z-index: 3;
+    }
+    .hint.pulse { animation: hintpulse 3s ease-in-out forwards; }
+    @keyframes hintpulse {
+      0%   { color: rgba(216, 218, 219, 0); }
+      35%  { color: rgba(216, 218, 219, 0.55); }
+      100% { color: rgba(216, 218, 219, 0); }
+    }
+
+    /* ---- Shadowbox ---------------------------------------------------- */
+    .shadowbox {
       position: fixed;
       inset: 0;
-      pointer-events: none;
-      z-index: 1;
-      overflow: hidden;
-    }
-
-    .floater {
-      position: absolute;
-      aspect-ratio: 171 / 193;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(29, 32, 34, 0.82);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
       opacity: 0;
-      display: block;
-      transform-origin: center center;
-      /* Per-element transitions set inline by JS so each floater has its own clock */
+      transition: opacity 260ms ease;
+    }
+    .shadowbox.open { opacity: 1; }
+    .shadowbox[hidden] { display: none; }
+
+    .card {
+      position: relative;
+      max-width: min(560px, 92vw);
+      max-height: min(86vh, 86dvh);
+      overflow-y: auto;
+      touch-action: pan-y;
+      background: rgba(49, 57, 60, 0.92);
+      border: 1px solid rgba(216, 218, 219, 0.12);
+      border-radius: 4px;
+      padding: clamp(28px, 6vmin, 48px) clamp(24px, 6vmin, 52px);
+      transform: scale(0.96) translateY(8px);
+      transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .shadowbox.open .card { transform: scale(1) translateY(0); }
+
+    .card blockquote {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: clamp(1.02rem, 2.4vmin, 1.25rem);
+      line-height: 1.75;
+      color: var(--mist);
+      quotes: '\201C' '\201D';
+    }
+    .card blockquote::before { content: open-quote; }
+    .card blockquote::after  { content: close-quote; }
+
+    .card figcaption {
+      margin-top: 1.4em;
+      font-family: var(--sans);
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--plume);
+    }
+    .card figcaption::before { content: '\2014\00a0'; color: var(--sipi); }
+
+    .close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 44px;
+      height: 44px;
+      appearance: none;
+      background: none;
+      border: 0;
+      color: rgba(216, 218, 219, 0.6);
+      font-family: var(--sans);
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 200ms ease;
+    }
+    .close:hover, .close:focus-visible { color: var(--posho); }
+    .close:focus-visible {
+      outline: 1px solid rgba(216, 218, 219, 0.6);
+      outline-offset: 2px;
     }
 
+    /* ---- Hum toggle ---------------------------------------------------- */
+    .hum {
+      position: fixed;
+      right: calc(env(safe-area-inset-right, 0px) + 10px);
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      appearance: none;
+      background: none;
+      border: 0;
+      cursor: pointer;
+      opacity: 0.35;
+      transition: opacity 250ms ease;
+      z-index: 5;
+    }
+    .hum:hover, .hum:focus-visible { opacity: 0.8; }
+    .hum:focus-visible {
+      outline: 1px solid rgba(216, 218, 219, 0.5);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    .hum svg { width: 17px; height: 17px; stroke: var(--plume); fill: none;
+               stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .hum .waves { transition: opacity 200ms ease; }
+    .hum .slash { opacity: 0; transition: opacity 200ms ease; }
+    .hum.muted .waves { opacity: 0; }
+    .hum.muted .slash { opacity: 1; }
+
+    /* ---- Grain --------------------------------------------------------- */
+    .grain {
+      position: fixed;
+      inset: -60px;
+      z-index: 4;
+      pointer-events: none;
+      opacity: 0.05;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ---- Reduced motion / no JS ---------------------------------------- */
     @media (prefers-reduced-motion: reduce) {
-      .floater {
-        transition: none !important;
-      }
+      .cue, .hum { display: none; }
+      .frag { transition: none !important; }
+      .rm #fTop    { transform: translate(1.6px, -1px); }
+      .rm #fBottom { transform: translate(-1.2px, 1.4px); }
+      .rm .line, .rm .name { transition: none; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Single source of truth for the icon: defined once, referenced by <use> -->
+  <!-- Single source of truth: the three fragments of the mark -->
   <svg class="defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <g id="knechtel-icon">
-        <path d="M5.17415 63.011C2.96018 62.5816 1.5609 61.2254 1.26671 59.2287C0.893314 56.7122 0.538777 54.2748 0.512376 51.6264L0.101267 12.9028C0.0673216 9.76848 0.346422 6.94681 0.663242 3.8878C0.825424 2.3357 2.21718 0.990788 3.75602 0.753451C7.19201 0.222269 10.2885 0.0452084 13.9546 0.0452085L138.978 7.00523e-06C141.392 7.11075e-06 148.022 0.158232 149.305 1.43533C150.832 2.96107 147.743 8.09583 146.536 10.164L121.179 53.6193C119.539 56.4334 117.434 57.8913 114.307 58.7729L71.8045 70.749C61.0401 73.7816 57.8531 73.2014 46.8474 71.0729L5.17039 63.011L5.17415 63.011Z" fill="#F2F2F2"/>
-        <path d="M3.0055 136.265C8.30093 134.118 13.2833 132.773 18.6353 131.247L51.1546 121.991C57.4948 120.187 63.8652 119.704 70.3713 121.113L86.9365 124.707C94.2271 126.29 101.197 128.038 108.36 130.03C116.031 132.159 117.845 135.606 121.394 142.12L141.728 179.423C143.21 182.143 147.411 189.195 145.937 191.263C145.526 191.843 144.228 192.427 143.331 192.45L124.291 193L14.3092 192.977C10.6695 192.977 7.45985 192.721 4.07289 192.329C1.742 192.058 0.550148 190.299 0.429455 188.02C-0.241902 175.46 -0.177786 151.545 0.991432 139.155C1.10081 137.979 1.78349 136.763 3.00174 136.269L3.0055 136.265Z" fill="#F2F2F2"/>
-        <path d="M108.888 98.1746C108.744 94.7916 109.714 92.3918 112.278 90.3801L117.532 86.2587L132.947 74.6104C136.609 71.8415 138.661 68.304 140.004 63.9566L148.177 37.4729C150.131 31.1439 161.265 16.6776 165.764 10.9137C166.39 10.1113 167.812 9.22978 168.793 9.22224C169.623 9.21848 170.404 10.9363 170.419 11.8179L170.913 45.3087L171.003 143.54L170.426 182.361C170.404 183.891 169.975 186.367 168.857 186.663C167.42 187.044 165.063 184.381 163.777 182.478C157.297 172.913 151.5 163.126 145.824 153.022C140.385 143.344 141.524 136.13 137.873 125.193C136.685 121.633 134.592 118.857 131.397 116.973L113.908 106.662C110.672 104.752 109.057 102.062 108.891 98.1746L108.888 98.1746Z" fill="#F2F2F2"/>
-      </g>
+      <path id="p-top" d="M5.17415 63.011C2.96018 62.5816 1.5609 61.2254 1.26671 59.2287C0.893314 56.7122 0.538777 54.2748 0.512376 51.6264L0.101267 12.9028C0.0673216 9.76848 0.346422 6.94681 0.663242 3.8878C0.825424 2.3357 2.21718 0.990788 3.75602 0.753451C7.19201 0.222269 10.2885 0.0452084 13.9546 0.0452085L138.978 7.00523e-06C141.392 7.11075e-06 148.022 0.158232 149.305 1.43533C150.832 2.96107 147.743 8.09583 146.536 10.164L121.179 53.6193C119.539 56.4334 117.434 57.8913 114.307 58.7729L71.8045 70.749C61.0401 73.7816 57.8531 73.2014 46.8474 71.0729L5.17039 63.011L5.17415 63.011Z"/>
+      <path id="p-bottom" d="M3.0055 136.265C8.30093 134.118 13.2833 132.773 18.6353 131.247L51.1546 121.991C57.4948 120.187 63.8652 119.704 70.3713 121.113L86.9365 124.707C94.2271 126.29 101.197 128.038 108.36 130.03C116.031 132.159 117.845 135.606 121.394 142.12L141.728 179.423C143.21 182.143 147.411 189.195 145.937 191.263C145.526 191.843 144.228 192.427 143.331 192.45L124.291 193L14.3092 192.977C10.6695 192.977 7.45985 192.721 4.07289 192.329C1.742 192.058 0.550148 190.299 0.429455 188.02C-0.241902 175.46 -0.177786 151.545 0.991432 139.155C1.10081 137.979 1.78349 136.763 3.00174 136.269L3.0055 136.265Z"/>
+      <path id="p-right" d="M108.888 98.1746C108.744 94.7916 109.714 92.3918 112.278 90.3801L117.532 86.2587L132.947 74.6104C136.609 71.8415 138.661 68.304 140.004 63.9566L148.177 37.4729C150.131 31.1439 161.265 16.6776 165.764 10.9137C166.39 10.1113 167.812 9.22978 168.793 9.22224C169.623 9.21848 170.404 10.9363 170.419 11.8179L170.913 45.3087L171.003 143.54L170.426 182.361C170.404 183.891 169.975 186.367 168.857 186.663C167.42 187.044 165.063 184.381 163.777 182.478C157.297 172.913 151.5 163.126 145.824 153.022C140.385 143.344 141.524 136.13 137.873 125.193C136.685 121.633 134.592 118.857 131.397 116.973L113.908 106.662C110.672 104.752 109.057 102.062 108.891 98.1746L108.888 98.1746Z"/>
     </defs>
   </svg>
 
-  <div id="floaters" aria-hidden="true"></div>
+  <div class="stage" id="stage">
+    <div class="mark" id="mark" role="img" aria-label="Gabriel Knechtel mark">
+      <div class="bloom" id="bloom"></div>
+      <svg class="frag" id="fTop" viewBox="0 0 171 193" aria-hidden="true"><use href="#p-top"/></svg>
+      <svg class="frag" id="fBottom" viewBox="0 0 171 193" aria-hidden="true"><use href="#p-bottom"/></svg>
+      <svg class="frag" id="fRight" viewBox="0 0 171 193" aria-hidden="true"><use href="#p-right"/></svg>
+    </div>
+    <button class="line" id="line" aria-haspopup="dialog" aria-controls="box">We are made for the valley.</button>
+    <div class="name" id="name" aria-hidden="true">KNECHTEL</div>
+  </div>
 
-  <svg class="icon" viewBox="0 0 171 193" role="img" aria-label="Gabriel Knechtel">
-    <use href="#knechtel-icon"/>
-  </svg>
+  <div class="cue" id="cue" aria-hidden="true">touch</div>
+  <div class="hint" id="hint" aria-hidden="true">steady</div>
+
+  <div class="shadowbox" id="box" role="dialog" aria-modal="true" aria-labelledby="quoteText" hidden>
+    <figure class="card">
+      <blockquote id="quoteText">We are not made for the mountains, for sunrises, or for the other beautiful attractions in life &mdash; those are simply intended to be moments of inspiration. We are made for the valley and the ordinary things of life and that is where we have to prove our stamina and strength.</blockquote>
+      <figcaption>Oswald Chambers</figcaption>
+      <button class="close" id="closeBox" aria-label="Close">&#215;</button>
+    </figure>
+  </div>
+
+  <button class="hum" id="humBtn" aria-label="Toggle sound" aria-pressed="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/>
+      <g class="waves">
+        <path d="M15.5 9.2a4 4 0 0 1 0 5.6"/>
+        <path d="M18 6.8a7.4 7.4 0 0 1 0 10.4"/>
+      </g>
+      <path class="slash" d="M15 9l6 6M21 9l-6 6"/>
+    </svg>
+  </button>
+
+  <div class="grain" aria-hidden="true"></div>
+
+  <noscript>
+    <style>
+      .frag { transform: none !important; fill: #f2f2f2 !important; }
+      .cue, .hum, .hint { display: none !important; }
+      .line { opacity: 1; pointer-events: none; border-bottom: 0; }
+      .name { opacity: 1; }
+    </style>
+  </noscript>
 
   <script>
     (function () {
       'use strict';
 
-      // ---- Tunables ----
-      const COUNT_DESKTOP = 6;
-      const COUNT_MOBILE = 3;
-      const MOBILE_BREAKPOINT = 768;
+      /* ================= Tunables ================= */
+      var RANGE_DEG   = 12;      // tilt range mapped to full travel
+      var LOCK_R      = 0.055;   // lock radius (normalized)
+      var ASSIST_R    = 0.16;    // magnetic assist radius
+      var LOCK_HOLD   = 220;     // ms inside lock radius before latch
+      var SMOOTH      = 0.10;    // input smoothing
+      var LOCK_ANIM   = 620;     // ms of overshoot snap
+      var RESOLVED_MS = 9500;    // resolved dwell before re-scatter
+      var RESCATTER_MS= 2400;    // chaos ramp duration
+      var HINT_AFTER  = 25000;   // ms of unsolved play before hint
+      var MICRO_PX    = 2.4;     // per-fragment breathing amplitude
 
-      const FADE_IN_MS = 2500;
-      const HOLD_MS = 1500;
-      const FADE_OUT_MS = 3000;
-      const WAIT_MIN_MS = 8000;
-      const WAIT_MAX_MS = 20000;
+      var TEAL   = [104, 169, 185];   // Lake Victoria
+      var ORANGE = [252, 122, 30];    // Sipi Firefall
+      var WHITE  = [242, 242, 242];   // Fresh Posho
 
-      const OPACITY_MIN = 0.04;
-      const OPACITY_MAX = 0.09;
+      /* ================= Elements ================= */
+      function $(id) { return document.getElementById(id); }
+      var mark = $('mark'), bloom = $('bloom'), lineEl = $('line'),
+          nameEl = $('name'), cue = $('cue'), hint = $('hint'),
+          box = $('box'), closeBtn = $('closeBox'), humBtn = $('humBtn');
+      var frags = [$('fTop'), $('fBottom'), $('fRight')];
+      var chroma = [TEAL, ORANGE, WHITE];
 
-      const SIZE_MIN_RATIO = 0.20;
-      const SIZE_MAX_RATIO = 0.80;
+      var rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var finePointer = window.matchMedia('(pointer: fine)').matches;
 
-      const CENTER_BUFFER = 0.40;   // 40% buffer around the center icon
-      const INITIAL_STAGGER_MS = 10000;
+      /* ================= State ================= */
+      var activated = finePointer;   // desktop: live immediately; mobile: first tap
+      var mode = finePointer ? 'cursor' : 'idle';  // idle|pending|gyro|drag|cursor
+      var gotGyro = false, baseSet = false, base = { x: 0, y: 0 };
+      var raw = { x: 0, y: 0 }, cur = { x: 0, y: 0 }, vel = { x: 0, y: 0 };
+      var target = { x: 0.4, y: -0.3 };
+      var dragging = false, lastPt = null;
+      var locked = false, resolved = false, modalOpen = false;
+      var lockT = 0, lockAnimOn = false, lockStart = 0, lockDist = 0, lockColorT = 0;
+      var cap = 1, capAnimOn = false, capStart = 0;
+      var rescatterTimer = 0, hintTimer = 0, hintShown = 0;
+      var AMPX = 200, AMPY = 160;
+      var dirs = [], rotMax = [], phase = [];
+      var depth = [0.9, 1.0, 0.72];
+      var lastFocus = null;
 
-      const ICON_W = 171;
-      const ICON_H = 193;
-      const SVG_NS = 'http://www.w3.org/2000/svg';
+      var rand = function (a, b) { return a + Math.random() * (b - a); };
+      var clamp = function (v, a, b) { return v < a ? a : (v > b ? b : v); };
+      var easeInOut = function (q) {
+        return q < 0.5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2;
+      };
 
-      // ---- State ----
-      const layer = document.getElementById('floaters');
-      const centerIcon = document.querySelector('.icon');
-      const prefersReducedMotion =
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      const rand = (min, max) => min + Math.random() * (max - min);
-      const isMobile = () =>
-        window.matchMedia('(max-width: ' + MOBILE_BREAKPOINT + 'px)').matches;
-
-      function getCenterExclusionRect() {
-        const r = centerIcon.getBoundingClientRect();
-        const bx = r.width * CENTER_BUFFER;
-        const by = r.height * CENTER_BUFFER;
-        return {
-          left: r.left - bx,
-          right: r.right + bx,
-          top: r.top - by,
-          bottom: r.bottom + by
-        };
+      function measure() {
+        var r = mark.getBoundingClientRect();
+        AMPX = Math.min(r.width * 1.15, window.innerWidth * 0.44);
+        AMPY = Math.min(r.height * 0.95, window.innerHeight * 0.34);
       }
 
-      function overlapsCenter(x, y, w, h) {
-        const c = getCenterExclusionRect();
-        return !(x + w < c.left || x > c.right || y + h < c.top || y > c.bottom);
+      function mix(a, b, t) {
+        return 'rgb(' +
+          Math.round(a[0] + (b[0] - a[0]) * t) + ',' +
+          Math.round(a[1] + (b[1] - a[1]) * t) + ',' +
+          Math.round(a[2] + (b[2] - a[2]) * t) + ')';
       }
 
-      function pickParams() {
-        const centerW = centerIcon.getBoundingClientRect().width;
-        const ratio = rand(SIZE_MIN_RATIO, SIZE_MAX_RATIO);
-        const width = centerW * ratio;
-        const height = width * (ICON_H / ICON_W);
+      /* ================= Scatter geometry ================= */
+      function newScatter() {
+        // Direction cones: top piece up-left, bottom piece down-left, right piece right.
+        var cones = [
+          rand(-155, -100) * Math.PI / 180,
+          rand(100, 150) * Math.PI / 180,
+          rand(-28, 28) * Math.PI / 180
+        ];
+        dirs = cones.map(function (a) { return { x: Math.cos(a), y: Math.sin(a) }; });
+        rotMax = [0, 1, 2].map(function () {
+          return (Math.random() < 0.5 ? -1 : 1) * rand(8, 14);
+        });
+        phase = [0, 1, 2].map(function () { return rand(0, Math.PI * 2); });
 
-        // Try to find a position outside the exclusion zone.
-        // Cap attempts so we never block.
-        let x = 0, y = 0;
-        for (let i = 0; i < 80; i++) {
-          x = rand(0, Math.max(0, window.innerWidth - width));
-          y = rand(0, Math.max(0, window.innerHeight - height));
-          if (!overlapsCenter(x, y, width, height)) break;
+        // New target: far from where the visitor is, and never at the neutral
+        // hold itself (which would solve on calibration).
+        for (var i = 0; i < 12; i++) {
+          target = { x: rand(-0.55, 0.55), y: rand(-0.55, 0.55) };
+          if (Math.hypot(target.x - cur.x, target.y - cur.y) > 0.45 &&
+              Math.hypot(target.x, target.y) > 0.28) break;
+        }
+      }
+
+      /* ================= Input: gyro ================= */
+      function mapOrientation(beta, gamma) {
+        var angle = (screen.orientation && typeof screen.orientation.angle === 'number')
+          ? screen.orientation.angle
+          : (window.orientation || 0);
+        var x, y;
+        switch (angle) {
+          case 90:  x = beta;   y = -gamma; break;
+          case -90:
+          case 270: x = -beta;  y = gamma;  break;
+          case 180: x = -gamma; y = -beta;  break;
+          default:  x = gamma;  y = beta;
+        }
+        return { x: x, y: y };
+      }
+
+      function onOrient(e) {
+        if (e.beta === null || e.gamma === null) return;
+        gotGyro = true;
+        if (mode === 'pending') mode = 'gyro';
+        if (mode !== 'gyro') return;
+        var m = mapOrientation(e.beta, e.gamma);
+        if (!baseSet) { base = m; baseSet = true; }
+        raw.x = clamp((m.x - base.x) / RANGE_DEG, -1.15, 1.15);
+        raw.y = clamp((m.y - base.y) / RANGE_DEG, -1.15, 1.15);
+      }
+
+      function listenGyro() {
+        window.addEventListener('deviceorientation', onOrient, true);
+      }
+
+      window.addEventListener('orientationchange', function () {
+        baseSet = false; // recalibrate to the new hold
+      });
+
+      /* ================= Input: pointer ================= */
+      function onMove(e) {
+        if (modalOpen) return;
+        if (mode === 'cursor') {
+          raw.x = clamp((e.clientX / window.innerWidth) * 2 - 1, -1.15, 1.15);
+          raw.y = clamp((e.clientY / window.innerHeight) * 2 - 1, -1.15, 1.15);
+        } else if ((mode === 'drag' || mode === 'pending') && dragging && lastPt) {
+          var k = 2 / (Math.min(window.innerWidth, window.innerHeight) * 0.6);
+          var dx = (e.clientX - lastPt.x) * k;
+          var dy = (e.clientY - lastPt.y) * k;
+          raw.x = clamp(raw.x + dx, -1.15, 1.15);
+          raw.y = clamp(raw.y + dy, -1.15, 1.15);
+          vel.x = dx; vel.y = dy;
+          lastPt = { x: e.clientX, y: e.clientY };
+        }
+      }
+
+      function onDown(e) {
+        activate();
+        audio.start();
+        if (mode === 'drag' || mode === 'pending' || mode === 'idle') {
+          dragging = true;
+          lastPt = { x: e.clientX, y: e.clientY };
+          vel.x = 0; vel.y = 0;
+        }
+      }
+
+      function onUp() { dragging = false; lastPt = null; }
+
+      window.addEventListener('pointermove', onMove, { passive: true });
+      window.addEventListener('pointerdown', onDown, { passive: true });
+      window.addEventListener('pointerup', onUp, { passive: true });
+      window.addEventListener('pointercancel', onUp, { passive: true });
+
+      window.addEventListener('keydown', function (e) {
+        if (modalOpen) { if (e.key === 'Escape') closeModal(); return; }
+        var step = 0.07, used = true;
+        if (e.key === 'ArrowLeft')       raw.x = clamp(raw.x - step, -1.15, 1.15);
+        else if (e.key === 'ArrowRight') raw.x = clamp(raw.x + step, -1.15, 1.15);
+        else if (e.key === 'ArrowUp')    raw.y = clamp(raw.y - step, -1.15, 1.15);
+        else if (e.key === 'ArrowDown')  raw.y = clamp(raw.y + step, -1.15, 1.15);
+        else used = false;
+        if (used) {
+          e.preventDefault();
+          if (mode === 'cursor') mode = 'drag'; // keys take over from cursor
+          audio.start();
+        }
+      });
+
+      /* ================= Activation ================= */
+      function activate() {
+        if (activated) return;
+        activated = true;
+        cue.classList.add('gone');
+        mode = 'pending';
+
+        var DOE = window.DeviceOrientationEvent;
+        if (DOE && typeof DOE.requestPermission === 'function') {
+          // iOS 13+: must be called inside the user gesture.
+          DOE.requestPermission().then(function (state) {
+            if (state === 'granted') listenGyro();
+          }).catch(function () { /* fall through to watchdog */ });
+        } else {
+          listenGyro();
         }
 
-        return {
-          x: x,
-          y: y,
-          width: width,
-          height: height,
-          rotation: Math.random() * 360,
-          opacity: rand(OPACITY_MIN, OPACITY_MAX)
-        };
-      }
-
-      function createFloater() {
-        const svg = document.createElementNS(SVG_NS, 'svg');
-        svg.setAttribute('viewBox', '0 0 ' + ICON_W + ' ' + ICON_H);
-        svg.setAttribute('aria-hidden', 'true');
-        svg.classList.add('floater');
-
-        const use = document.createElementNS(SVG_NS, 'use');
-        use.setAttribute('href', '#knechtel-icon');
-        svg.appendChild(use);
-
-        layer.appendChild(svg);
-        return svg;
-      }
-
-      function applyPosition(el, p) {
-        el.style.left = p.x + 'px';
-        el.style.top = p.y + 'px';
-        el.style.width = p.width + 'px';
-        el.style.height = p.height + 'px';
-        el.style.transform = 'rotate(' + p.rotation + 'deg)';
-      }
-
-      function cycle(el) {
-        const p = pickParams();
-        applyPosition(el, p);
-
-        // Set fade-in transition before opacity change
-        el.style.transition = 'opacity ' + FADE_IN_MS + 'ms ease-out';
-        el.style.opacity = '0';
-
-        // Force reflow so the transition applies to the next opacity change
-        void el.offsetWidth;
-        el.style.opacity = String(p.opacity);
-
-        // Schedule fade out after fade-in completes + hold
+        // Watchdog: in-app browsers (Instagram, FB, TikTok) often swallow the
+        // permission prompt or never fire events. If no reading lands, become drag.
         setTimeout(function () {
-          el.style.transition = 'opacity ' + FADE_OUT_MS + 'ms ease-in';
-          el.style.opacity = '0';
+          if (mode === 'pending') mode = gotGyro ? 'gyro' : 'drag';
+        }, 900);
 
-          // After fade-out completes, wait, then cycle again
-          setTimeout(function () {
-            const wait = rand(WAIT_MIN_MS, WAIT_MAX_MS);
-            setTimeout(function () { cycle(el); }, wait);
-          }, FADE_OUT_MS);
-        }, FADE_IN_MS + HOLD_MS);
+        armHint();
       }
 
-      function placeStatic(el) {
-        // Reduced-motion fallback: a single static placement at low opacity.
-        const p = pickParams();
-        applyPosition(el, p);
-        el.style.transition = 'none';
-        el.style.opacity = String(p.opacity);
+      if (finePointer) cue.textContent = 'move';
+
+      function armHint() {
+        clearTimeout(hintTimer);
+        if (hintShown >= 2) return;
+        hintTimer = setTimeout(function () {
+          if (!locked && !resolved && !modalOpen) {
+            hintShown++;
+            hint.classList.remove('pulse');
+            void hint.offsetWidth;
+            hint.classList.add('pulse');
+          }
+        }, HINT_AFTER);
       }
 
+      /* ================= Audio: the carrier hum ================= */
+      var audio = {
+        ctx: null, gain: null,
+        muted: localStorage.getItem('kn_hum') === '0',
+        start: function () {
+          if (rm) return;
+          if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+          var C = window.AudioContext || window.webkitAudioContext;
+          if (!C) return;
+          try {
+            var ctx = new C();
+            var o1 = ctx.createOscillator();
+            var o2 = ctx.createOscillator();
+            var lp = ctx.createBiquadFilter();
+            var g = ctx.createGain();
+            o1.type = 'sine'; o1.frequency.value = 55;
+            o2.type = 'sine'; o2.frequency.value = 55.7; // slow beat
+            lp.type = 'lowpass'; lp.frequency.value = 170; lp.Q.value = 0.4;
+            g.gain.value = 0;
+            o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(ctx.destination);
+            o1.start(); o2.start();
+            this.ctx = ctx; this.gain = g;
+          } catch (e) { /* silence is acceptable */ }
+        },
+        update: function (align) {
+          if (!this.gain) return;
+          var t = this.muted ? 0 : (0.012 + align * align * 0.03); // very quiet
+          this.gain.gain.setTargetAtTime(t, this.ctx.currentTime, 0.3);
+        },
+        settle: function () {
+          if (!this.gain) return;
+          this.gain.gain.setTargetAtTime(this.muted ? 0 : 0.008, this.ctx.currentTime, 0.6);
+        },
+        chime: function () {
+          if (!this.ctx || this.muted) return;
+          var ctx = this.ctx, t = ctx.currentTime;
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(587, t);
+          o.frequency.exponentialRampToValueAtTime(880, t + 0.55);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.03, t + 0.05);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(t); o.stop(t + 1.2);
+        },
+        toggle: function () {
+          this.muted = !this.muted;
+          try { localStorage.setItem('kn_hum', this.muted ? '0' : '1'); } catch (e) {}
+          humBtn.classList.toggle('muted', this.muted);
+          humBtn.setAttribute('aria-pressed', String(!this.muted));
+          if (this.gain) {
+            this.gain.gain.setTargetAtTime(this.muted ? 0 : 0.012, this.ctx.currentTime, 0.15);
+          }
+        }
+      };
+
+      humBtn.classList.toggle('muted', audio.muted);
+      humBtn.setAttribute('aria-pressed', String(!audio.muted));
+      humBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        audio.start();
+        audio.toggle();
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        if (!audio.ctx) return;
+        if (document.hidden) audio.ctx.suspend();
+        else if (activated) audio.ctx.resume();
+      });
+
+      /* ================= Lock / resolve / re-scatter ================= */
+      function doLock(now, dist, colorT) {
+        locked = true;
+        lockAnimOn = true;
+        lockStart = now;
+        lockDist = dist;
+        lockColorT = colorT;
+        clearTimeout(hintTimer);
+        bloom.classList.remove('pulse');
+        void bloom.offsetWidth;
+        bloom.classList.add('pulse');
+        audio.chime();
+        audio.settle();
+        if (navigator.vibrate) { try { navigator.vibrate(14); } catch (e) {} }
+      }
+
+      function showResolved() {
+        resolved = true;
+        lineEl.classList.add('show');
+        nameEl.classList.add('show');
+        clearTimeout(rescatterTimer);
+        rescatterTimer = setTimeout(reScatter, RESOLVED_MS);
+      }
+
+      function reScatter() {
+        if (modalOpen) {
+          rescatterTimer = setTimeout(reScatter, 4000);
+          return;
+        }
+        lineEl.classList.remove('show');
+        nameEl.classList.remove('show');
+        setTimeout(function () {
+          resolved = false;
+          locked = false;
+          lockT = 0;
+          newScatter();
+          cap = 0.02;
+          capAnimOn = true;
+          capStart = performance.now();
+          armHint();
+        }, 480);
+      }
+
+      mark.addEventListener('click', function () {
+        if (resolved && !modalOpen) {
+          clearTimeout(rescatterTimer);
+          reScatter();
+        }
+      });
+
+      /* ================= Shadowbox ================= */
+      function openModal() {
+        modalOpen = true;
+        lastFocus = document.activeElement;
+        clearTimeout(rescatterTimer);
+        box.hidden = false;
+        requestAnimationFrame(function () { box.classList.add('open'); });
+        closeBtn.focus();
+        audio.settle();
+      }
+
+      function closeModal() {
+        modalOpen = false;
+        box.classList.remove('open');
+        setTimeout(function () { box.hidden = true; }, 280);
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+        if (resolved) {
+          clearTimeout(rescatterTimer);
+          rescatterTimer = setTimeout(reScatter, 6000);
+        }
+      }
+
+      lineEl.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openModal();
+      });
+      closeBtn.addEventListener('click', closeModal);
+      box.addEventListener('click', function (e) {
+        if (e.target === box) closeModal();
+      });
+      box.addEventListener('keydown', function (e) {
+        if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+      });
+
+      /* ================= Frame loop ================= */
+      function frame(t) {
+        requestAnimationFrame(frame);
+        if (document.hidden) return;
+
+        // --- input source
+        var ix, iy;
+        if (!activated || mode === 'idle') {
+          // pre-touch drift: the page breathes on its own
+          ix = Math.sin(t * 0.00021) * 0.45 + Math.sin(t * 0.000073) * 0.2;
+          iy = Math.cos(t * 0.00017) * 0.45 + Math.cos(t * 0.000059) * 0.15;
+        } else {
+          if (mode === 'drag' && !dragging) {
+            raw.x = clamp(raw.x + vel.x, -1.15, 1.15);
+            raw.y = clamp(raw.y + vel.y, -1.15, 1.15);
+            vel.x *= 0.92; vel.y *= 0.92;
+          }
+          ix = raw.x; iy = raw.y;
+        }
+        cur.x += (ix - cur.x) * SMOOTH;
+        cur.y += (iy - cur.y) * SMOOTH;
+
+        // --- distance to hidden registration
+        var dx = cur.x - target.x, dy = cur.y - target.y;
+        var dist = clamp(Math.hypot(dx, dy) / 1.25, 0, 1);
+
+        if (activated && !locked && !resolved && dist < ASSIST_R) {
+          cur.x -= dx * 0.035; // magnetic assist
+          cur.y -= dy * 0.035;
+        }
+
+        // --- chaos ramp on re-scatter
+        if (capAnimOn) {
+          var q = (t - capStart) / RESCATTER_MS;
+          if (q >= 1) { cap = 1; capAnimOn = false; }
+          else cap = 0.02 + 0.98 * easeInOut(q);
+        }
+
+        // --- lock detection (hysteresis)
+        if (activated && !locked && !resolved && !capAnimOn) {
+          if (dist < LOCK_R) {
+            if (!lockT) lockT = t;
+            else if (t - lockT > LOCK_HOLD) {
+              doLock(t, dist, clamp((dist - 0.06) / 0.44, 0, 1));
+            }
+          } else {
+            lockT = 0;
+          }
+        }
+
+        // --- render distance & color
+        var rd, colorT;
+        if (lockAnimOn) {
+          var p = (t - lockStart) / LOCK_ANIM;
+          if (p >= 1) {
+            lockAnimOn = false;
+            rd = 0;
+            colorT = 0;
+            showResolved();
+          } else {
+            rd = lockDist * Math.exp(-5 * p) * Math.cos(10 * p); // overshoot ring
+            colorT = Math.max(0, lockColorT * (1 - p * 1.8));
+          }
+        } else if (resolved) {
+          // the scar: 1–2px chromatic fringe that follows the hand
+          rd = clamp(Math.hypot(cur.x - target.x, cur.y - target.y) * 0.06, 0, 0.028);
+          colorT = 0.11;
+        } else {
+          rd = Math.max(dist, activated ? 0 : 0.5) * cap;
+          colorT = clamp((rd - 0.06) / 0.44, 0, 1);
+        }
+
+        // --- paint
+        for (var i = 0; i < 3; i++) {
+          var breathe = (0.25 + 0.75 * Math.abs(rd));
+          var mx = Math.sin(t * 0.0011 + phase[i]) * MICRO_PX * breathe;
+          var my = Math.cos(t * 0.0009 + phase[i] * 1.7) * MICRO_PX * breathe;
+          var ox = dirs[i].x * rd * AMPX * depth[i] + mx;
+          var oy = dirs[i].y * rd * AMPY * depth[i] + my;
+          var rot = rotMax[i] * rd;
+          frags[i].style.transform =
+            'translate3d(' + ox.toFixed(2) + 'px,' + oy.toFixed(2) + 'px,0) ' +
+            'rotate(' + rot.toFixed(2) + 'deg)';
+          frags[i].style.fill = mix(WHITE, chroma[i], colorT);
+        }
+
+        if (activated && !locked && !resolved) audio.update(1 - dist);
+      }
+
+      /* ================= Boot ================= */
       function init() {
-        // Wait until layout has measured the center icon
-        if (!centerIcon.getBoundingClientRect().width) {
+        if (!mark.getBoundingClientRect().width) {
           requestAnimationFrame(init);
           return;
         }
+        measure();
+        window.addEventListener('resize', measure);
+        newScatter();
 
-        const count = isMobile() ? COUNT_MOBILE : COUNT_DESKTOP;
-
-        for (let i = 0; i < count; i++) {
-          const el = createFloater();
-          if (prefersReducedMotion) {
-            placeStatic(el);
-          } else {
-            // Stagger first appearances so they never sync
-            const delay = Math.random() * INITIAL_STAGGER_MS;
-            setTimeout(function () { cycle(el); }, delay);
-          }
+        if (rm) {
+          // Reduced motion: arrive resolved. Static fringe via CSS class.
+          document.body.classList.add('rm');
+          for (var i = 0; i < 3; i++) frags[i].style.fill = mix(WHITE, chroma[i], 0.11);
+          lineEl.classList.add('show');
+          nameEl.classList.add('show');
+          cue.classList.add('gone');
+          return; // no loop, no audio, no re-scatter
         }
+
+        if (finePointer) {
+          cue.classList.add('gone'); // desktop teaches itself through the cursor
+          armHint();
+        }
+        requestAnimationFrame(frame);
       }
 
       if (document.readyState === 'loading') {
