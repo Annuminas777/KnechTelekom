@@ -407,6 +407,7 @@
   </noscript>
 
   <script>
+
     (function () {
       'use strict';
 
@@ -421,6 +422,7 @@
       var RESCATTER_MS= 2400;    // chaos ramp duration
       var HINT_AFTER  = 25000;   // ms of unsolved play before hint
       var MICRO_PX    = 2.4;     // per-fragment breathing amplitude
+      var IN_CLAMP    = 1.3;     // input space bounds
 
       var TEAL   = [104, 169, 185];   // Lake Victoria
       var ORANGE = [252, 122, 30];    // Sipi Firefall
@@ -438,12 +440,20 @@
       var finePointer = window.matchMedia('(pointer: fine)').matches;
 
       /* ================= State ================= */
-      var activated = finePointer;   // desktop: live immediately; mobile: first tap
-      var mode = finePointer ? 'cursor' : 'idle';  // idle|pending|gyro|drag|cursor
-      var gotGyro = false, baseSet = false, base = { x: 0, y: 0 };
-      var raw = { x: 0, y: 0 }, cur = { x: 0, y: 0 }, vel = { x: 0, y: 0 };
+      /* Input model: on touch devices, tilt and drag are BOTH always live and
+         summed — no modes, no watchdogs. Drag needs no permission and works
+         from the first touch; tilt joins if/when iOS grants it. Desktop keeps
+         the absolute cursor. */
+      var activated = finePointer;
+      var cursorLive = finePointer;         // absolute cursor until arrows used
+      var baseSet = false, base = { x: 0, y: 0 };
+      var gyro = { x: 0, y: 0 };            // calibrated tilt (touch devices)
+      var drag = { x: 0, y: 0 };            // accumulated touch drag
+      var raw  = { x: 0, y: 0 };            // desktop cursor / keys
+      var vel  = { x: 0, y: 0 };
+      var cur  = { x: 0, y: 0 };
       var target = { x: 0.4, y: -0.3 };
-      var dragging = false, lastPt = null;
+      var dragging = false, lastPt = null, permAsked = false;
       var locked = false, resolved = false, modalOpen = false;
       var lockT = 0, lockAnimOn = false, lockStart = 0, lockDist = 0, lockColorT = 0;
       var cap = 1, capAnimOn = false, capStart = 0;
@@ -495,7 +505,7 @@
         }
       }
 
-      /* ================= Input: gyro ================= */
+      /* ================= Input: tilt ================= */
       function mapOrientation(beta, gamma) {
         var angle = (screen.orientation && typeof screen.orientation.angle === 'number')
           ? screen.orientation.angle
@@ -513,35 +523,43 @@
 
       function onOrient(e) {
         if (e.beta === null || e.gamma === null) return;
-        gotGyro = true;
-        if (mode === 'pending') mode = 'gyro';
-        if (mode !== 'gyro') return;
         var m = mapOrientation(e.beta, e.gamma);
         if (!baseSet) { base = m; baseSet = true; }
-        raw.x = clamp((m.x - base.x) / RANGE_DEG, -1.15, 1.15);
-        raw.y = clamp((m.y - base.y) / RANGE_DEG, -1.15, 1.15);
-      }
-
-      function listenGyro() {
-        window.addEventListener('deviceorientation', onOrient, true);
+        gyro.x = clamp((m.x - base.x) / RANGE_DEG, -IN_CLAMP, IN_CLAMP);
+        gyro.y = clamp((m.y - base.y) / RANGE_DEG, -IN_CLAMP, IN_CLAMP);
+        activate(); // Android fires with no tap: the page is live from load
       }
 
       window.addEventListener('orientationchange', function () {
         baseSet = false; // recalibrate to the new hold
       });
 
+      // iOS gates motion behind a permission that must be requested inside a
+      // *completed* gesture — pointerup/click qualify, pointerdown does not.
+      // The listener is attached unconditionally at boot; this only unlocks it.
+      function askMotion() {
+        if (permAsked) return;
+        permAsked = true;
+        var DOE = window.DeviceOrientationEvent;
+        if (DOE && typeof DOE.requestPermission === 'function') {
+          try {
+            DOE.requestPermission().then(function () {}).catch(function () {});
+          } catch (e) { /* some builds throw synchronously; drag carries on */ }
+        }
+      }
+
       /* ================= Input: pointer ================= */
       function onMove(e) {
         if (modalOpen) return;
-        if (mode === 'cursor') {
-          raw.x = clamp((e.clientX / window.innerWidth) * 2 - 1, -1.15, 1.15);
-          raw.y = clamp((e.clientY / window.innerHeight) * 2 - 1, -1.15, 1.15);
-        } else if ((mode === 'drag' || mode === 'pending') && dragging && lastPt) {
+        if (cursorLive) {
+          raw.x = clamp((e.clientX / window.innerWidth) * 2 - 1, -IN_CLAMP, IN_CLAMP);
+          raw.y = clamp((e.clientY / window.innerHeight) * 2 - 1, -IN_CLAMP, IN_CLAMP);
+        } else if (!finePointer && dragging && lastPt) {
           var k = 2 / (Math.min(window.innerWidth, window.innerHeight) * 0.6);
           var dx = (e.clientX - lastPt.x) * k;
           var dy = (e.clientY - lastPt.y) * k;
-          raw.x = clamp(raw.x + dx, -1.15, 1.15);
-          raw.y = clamp(raw.y + dy, -1.15, 1.15);
+          drag.x = clamp(drag.x + dx, -IN_CLAMP, IN_CLAMP);
+          drag.y = clamp(drag.y + dy, -IN_CLAMP, IN_CLAMP);
           vel.x = dx; vel.y = dy;
           lastPt = { x: e.clientX, y: e.clientY };
         }
@@ -549,32 +567,47 @@
 
       function onDown(e) {
         activate();
-        audio.start();
-        if (mode === 'drag' || mode === 'pending' || mode === 'idle') {
+        audio.start(); // best effort; the guaranteed unlock happens on up
+        if (!finePointer) {
           dragging = true;
           lastPt = { x: e.clientX, y: e.clientY };
           vel.x = 0; vel.y = 0;
         }
       }
 
-      function onUp() { dragging = false; lastPt = null; }
+      function onUp() {
+        dragging = false;
+        lastPt = null;
+        askMotion();   // legal moment for the iOS motion prompt
+        audio.start(); // and for audio autoplay
+      }
 
       window.addEventListener('pointermove', onMove, { passive: true });
       window.addEventListener('pointerdown', onDown, { passive: true });
       window.addEventListener('pointerup', onUp, { passive: true });
       window.addEventListener('pointercancel', onUp, { passive: true });
+      window.addEventListener('click', function () { askMotion(); audio.start(); });
+
+      // Shield: in-app browsers (Instagram especially) hijack vertical pans
+      // for swipe-to-dismiss. Claim every touchmove except inside the modal,
+      // which needs to scroll on short screens.
+      document.addEventListener('touchmove', function (e) {
+        if (!box.contains(e.target)) e.preventDefault();
+      }, { passive: false });
 
       window.addEventListener('keydown', function (e) {
         if (modalOpen) { if (e.key === 'Escape') closeModal(); return; }
         var step = 0.07, used = true;
-        if (e.key === 'ArrowLeft')       raw.x = clamp(raw.x - step, -1.15, 1.15);
-        else if (e.key === 'ArrowRight') raw.x = clamp(raw.x + step, -1.15, 1.15);
-        else if (e.key === 'ArrowUp')    raw.y = clamp(raw.y - step, -1.15, 1.15);
-        else if (e.key === 'ArrowDown')  raw.y = clamp(raw.y + step, -1.15, 1.15);
+        var tgt = finePointer ? raw : drag;
+        if (e.key === 'ArrowLeft')       tgt.x = clamp(tgt.x - step, -IN_CLAMP, IN_CLAMP);
+        else if (e.key === 'ArrowRight') tgt.x = clamp(tgt.x + step, -IN_CLAMP, IN_CLAMP);
+        else if (e.key === 'ArrowUp')    tgt.y = clamp(tgt.y - step, -IN_CLAMP, IN_CLAMP);
+        else if (e.key === 'ArrowDown')  tgt.y = clamp(tgt.y + step, -IN_CLAMP, IN_CLAMP);
         else used = false;
         if (used) {
           e.preventDefault();
-          if (mode === 'cursor') mode = 'drag'; // keys take over from cursor
+          if (finePointer) cursorLive = false; // keys take over from cursor
+          activate();
           audio.start();
         }
       });
@@ -584,28 +617,10 @@
         if (activated) return;
         activated = true;
         cue.classList.add('gone');
-        mode = 'pending';
-
-        var DOE = window.DeviceOrientationEvent;
-        if (DOE && typeof DOE.requestPermission === 'function') {
-          // iOS 13+: must be called inside the user gesture.
-          DOE.requestPermission().then(function (state) {
-            if (state === 'granted') listenGyro();
-          }).catch(function () { /* fall through to watchdog */ });
-        } else {
-          listenGyro();
-        }
-
-        // Watchdog: in-app browsers (Instagram, FB, TikTok) often swallow the
-        // permission prompt or never fire events. If no reading lands, become drag.
-        setTimeout(function () {
-          if (mode === 'pending') mode = gotGyro ? 'gyro' : 'drag';
-        }, 900);
-
         armHint();
       }
 
-      if (finePointer) cue.textContent = 'move';
+      if (!finePointer) cue.textContent = 'drag';
 
       function armHint() {
         clearTimeout(hintTimer);
@@ -623,7 +638,10 @@
       /* ================= Audio: the carrier hum ================= */
       var audio = {
         ctx: null, gain: null,
-        muted: localStorage.getItem('kn_hum') === '0',
+        muted: (function () {
+          try { return localStorage.getItem('kn_hum') === '0'; }
+          catch (e) { return false; }
+        })(),
         start: function () {
           if (rm) return;
           if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
@@ -782,17 +800,20 @@
 
         // --- input source
         var ix, iy;
-        if (!activated || mode === 'idle') {
-          // pre-touch drift: the page breathes on its own
-          ix = Math.sin(t * 0.00021) * 0.45 + Math.sin(t * 0.000073) * 0.2;
-          iy = Math.cos(t * 0.00017) * 0.45 + Math.cos(t * 0.000059) * 0.15;
+        if (!activated) {
+          // pre-touch: unmistakably alive, still unhurried (~13s wander)
+          ix = Math.sin(t * 0.00047) * 0.5 + Math.sin(t * 0.00013) * 0.25;
+          iy = Math.cos(t * 0.00039) * 0.5 + Math.cos(t * 0.00011) * 0.2;
+        } else if (finePointer) {
+          ix = raw.x; iy = raw.y;
         } else {
-          if (mode === 'drag' && !dragging) {
-            raw.x = clamp(raw.x + vel.x, -1.15, 1.15);
-            raw.y = clamp(raw.y + vel.y, -1.15, 1.15);
+          if (!dragging) {
+            drag.x = clamp(drag.x + vel.x, -IN_CLAMP, IN_CLAMP);
+            drag.y = clamp(drag.y + vel.y, -IN_CLAMP, IN_CLAMP);
             vel.x *= 0.92; vel.y *= 0.92;
           }
-          ix = raw.x; iy = raw.y;
+          ix = clamp(gyro.x + drag.x, -IN_CLAMP, IN_CLAMP);
+          iy = clamp(gyro.y + drag.y, -IN_CLAMP, IN_CLAMP);
         }
         cur.x += (ix - cur.x) * SMOOTH;
         cur.y += (iy - cur.y) * SMOOTH;
@@ -839,7 +860,7 @@
             colorT = Math.max(0, lockColorT * (1 - p * 1.8));
           }
         } else if (resolved) {
-          // the scar: 1–2px chromatic fringe that follows the hand
+          // the scar: 1-2px chromatic fringe that follows the hand
           rd = clamp(Math.hypot(cur.x - target.x, cur.y - target.y) * 0.06, 0, 0.028);
           colorT = 0.11;
         } else {
@@ -884,7 +905,11 @@
           return; // no loop, no audio, no re-scatter
         }
 
-        if (finePointer) {
+        if (!finePointer) {
+          // Tilt listener lives from boot: Android streams immediately,
+          // iOS begins the moment its permission is granted mid-session.
+          window.addEventListener('deviceorientation', onOrient, true);
+        } else {
           cue.classList.add('gone'); // desktop teaches itself through the cursor
           armHint();
         }
