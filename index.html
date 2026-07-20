@@ -341,14 +341,10 @@
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     }
 
-    /* ---- Reduced motion / no JS ---------------------------------------- */
-    @media (prefers-reduced-motion: reduce) {
-      .cue, .hum { display: none; }
-      .frag { transition: none !important; }
-      .rm #fTop    { transform: translate(1.6px, -1px); }
-      .rm #fBottom { transform: translate(-1.2px, 1.4px); }
-      .rm .line, .rm .name { transition: none; }
-    }
+    /* ---- Reduced motion --------------------------------------------------
+       Handled in JS as a calm interactive cut: static scatter, drag-only
+       input, quick settle on lock, manual re-scatter. Nothing moves unless
+       the visitor moves it. ------------------------------------------------ */
   </style>
 </head>
 <body>
@@ -469,6 +465,19 @@
         return q < 0.5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2;
       };
 
+      // Reduced motion: a calm cut, not a dead end. The hunt stays — but the
+      // page never moves on its own: static scatter pose, drag-only input,
+      // no breathing, fast re-scatter only when the visitor asks for it.
+      if (rm) { MICRO_PX = 0; RESCATTER_MS = 650; }
+      var idleFix = {
+        x: (Math.random() < 0.5 ? -1 : 1) * rand(0.3, 0.5),
+        y: (Math.random() < 0.5 ? -1 : 1) * rand(0.25, 0.45)
+      };
+      if (rm) {
+        cur.x = idleFix.x;  cur.y = idleFix.y;
+        drag.x = idleFix.x; drag.y = idleFix.y; // first touch continues seamlessly
+      }
+
       function measure() {
         var r = mark.getBoundingClientRect();
         AMPX = Math.min(r.width * 1.15, window.innerWidth * 0.44);
@@ -538,7 +547,7 @@
       // *completed* gesture — pointerup/click qualify, pointerdown does not.
       // The listener is attached unconditionally at boot; this only unlocks it.
       function askMotion() {
-        if (permAsked) return;
+        if (permAsked || rm) return; // RM is drag-only: never prompt for tilt
         permAsked = true;
         var DOE = window.DeviceOrientationEvent;
         if (DOE && typeof DOE.requestPermission === 'function') {
@@ -643,7 +652,6 @@
           catch (e) { return false; }
         })(),
         start: function () {
-          if (rm) return;
           if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
           var C = window.AudioContext || window.webkitAudioContext;
           if (!C) return;
@@ -717,9 +725,11 @@
         lockDist = dist;
         lockColorT = colorT;
         clearTimeout(hintTimer);
-        bloom.classList.remove('pulse');
-        void bloom.offsetWidth;
-        bloom.classList.add('pulse');
+        if (!rm) {
+          bloom.classList.remove('pulse');
+          void bloom.offsetWidth;
+          bloom.classList.add('pulse');
+        }
         audio.chime();
         audio.settle();
         if (navigator.vibrate) { try { navigator.vibrate(14); } catch (e) {} }
@@ -730,7 +740,7 @@
         lineEl.classList.add('show');
         nameEl.classList.add('show');
         clearTimeout(rescatterTimer);
-        rescatterTimer = setTimeout(reScatter, RESOLVED_MS);
+        if (!rm) rescatterTimer = setTimeout(reScatter, RESOLVED_MS);
       }
 
       function reScatter() {
@@ -775,7 +785,7 @@
         box.classList.remove('open');
         setTimeout(function () { box.hidden = true; }, 280);
         if (lastFocus && lastFocus.focus) lastFocus.focus();
-        if (resolved) {
+        if (resolved && !rm) {
           clearTimeout(rescatterTimer);
           rescatterTimer = setTimeout(reScatter, 6000);
         }
@@ -801,9 +811,13 @@
         // --- input source
         var ix, iy;
         if (!activated) {
-          // pre-touch: unmistakably alive, still unhurried (~13s wander)
-          ix = Math.sin(t * 0.00047) * 0.5 + Math.sin(t * 0.00013) * 0.25;
-          iy = Math.cos(t * 0.00039) * 0.5 + Math.cos(t * 0.00011) * 0.2;
+          if (rm) {
+            ix = idleFix.x; iy = idleFix.y; // perfectly still until touched
+          } else {
+            // pre-touch: unmistakably alive, still unhurried (~13s wander)
+            ix = Math.sin(t * 0.00047) * 0.5 + Math.sin(t * 0.00013) * 0.25;
+            iy = Math.cos(t * 0.00039) * 0.5 + Math.cos(t * 0.00011) * 0.2;
+          }
         } else if (finePointer) {
           ix = raw.x; iy = raw.y;
         } else {
@@ -856,7 +870,9 @@
             colorT = 0;
             showResolved();
           } else {
-            rd = lockDist * Math.exp(-5 * p) * Math.cos(10 * p); // overshoot ring
+            rd = rm
+              ? lockDist * Math.exp(-8 * p)                    // clean settle
+              : lockDist * Math.exp(-5 * p) * Math.cos(10 * p); // overshoot ring
             colorT = Math.max(0, lockColorT * (1 - p * 1.8));
           }
         } else if (resolved) {
@@ -895,21 +911,13 @@
         window.addEventListener('resize', measure);
         newScatter();
 
-        if (rm) {
-          // Reduced motion: arrive resolved. Static fringe via CSS class.
-          document.body.classList.add('rm');
-          for (var i = 0; i < 3; i++) frags[i].style.fill = mix(WHITE, chroma[i], 0.11);
-          lineEl.classList.add('show');
-          nameEl.classList.add('show');
-          cue.classList.add('gone');
-          return; // no loop, no audio, no re-scatter
-        }
-
-        if (!finePointer) {
+        if (!finePointer && !rm) {
           // Tilt listener lives from boot: Android streams immediately,
           // iOS begins the moment its permission is granted mid-session.
+          // Under reduced motion, drag is the sole instrument by design.
           window.addEventListener('deviceorientation', onOrient, true);
-        } else {
+        }
+        if (finePointer) {
           cue.classList.add('gone'); // desktop teaches itself through the cursor
           armHint();
         }
